@@ -96,6 +96,7 @@ h1 {
 }
 
 .auth-gate,
+.bento-grid,
 .dashboard-grid,
 .admin-grid {
   display: grid;
@@ -254,6 +255,318 @@ select {
   gap: 14px;
 }
 
+.bento-grid {
+  grid-template-columns: 300px minmax(0, 1fr) 340px;
+  align-items: start;
+}
+
+.bento-col-left,
+.bento-col-middle,
+.bento-col-right {
+  display: grid;
+  gap: 16px;
+}
+
+.card-header,
+.split-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.split-header {
+  justify-content: space-between;
+}
+
+.small-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.icon-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  display: inline-block;
+  background: var(--gold);
+  box-shadow: 0 0 10px rgba(240, 192, 96, 0.5);
+}
+
+.icon-dot.green {
+  background: var(--accent-green);
+}
+
+.icon-dot.blue {
+  background: var(--accent-blue);
+}
+
+.icon-dot.purple {
+  background: #a78bfa;
+}
+
+.role-overview {
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.role-level-badge {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  position: relative;
+  background: conic-gradient(from 210deg, var(--gold), var(--gold-bright), var(--gold));
+  color: #1a1a0a;
+  font-weight: 900;
+  font-size: 1.8rem;
+}
+
+.role-level-badge .lv-label {
+  position: absolute;
+  top: -6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #1a1a0a;
+  color: var(--gold-bright);
+  font-size: 0.62rem;
+}
+
+.role-exp-info,
+.role-exp-remaining {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.exp-bar-outer,
+.growth-bar-outer {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+}
+
+.exp-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-bright));
+}
+
+.exp-bar-label {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.radar-placeholder {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  position: relative;
+}
+
+.radar-ring {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  position: absolute;
+  border: 1px solid rgba(240, 192, 96, 0.28);
+  background:
+    radial-gradient(circle, rgba(240, 192, 96, 0.16) 0 2px, transparent 3px),
+    repeating-radial-gradient(circle, transparent 0 24px, rgba(255, 255, 255, 0.06) 25px 26px);
+}
+
+.quote-list,
+.goal-list {
+  display: grid;
+  gap: 10px;
+}
+
+.quote-item,
+.goal-list li {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.quote-date {
+  color: var(--gold);
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.goal-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.checkin-grid,
+.growth-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.checkin-item,
+.growth-item {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: var(--bg-secondary);
+}
+
+.checkin-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ci-level,
+.ci-status,
+.ci-exp,
+.growth-stats,
+.growth-desc {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.ci-name,
+.growth-name {
+  color: var(--text-primary);
+  font-weight: 800;
+  min-width: 0;
+}
+
+.ci-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--text-muted);
+}
+
+.growth-item {
+  display: grid;
+  gap: 8px;
+}
+
+.growth-top,
+.growth-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.growth-lv {
+  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.growth-bar-inner {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6b6d80, #888);
+}
+
+.record-table-wrap {
+  overflow: auto;
+  max-height: 360px;
+}
+
+.record-table,
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.record-table {
+  min-width: 760px;
+}
+
+.record-table th,
+.record-table td,
+.calendar-table th,
+.calendar-table td {
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 9px 10px;
+  text-align: left;
+}
+
+.record-table th,
+.calendar-table th {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.empty-cell {
+  text-align: center !important;
+  color: var(--text-muted);
+}
+
+.calendar-table td {
+  text-align: center;
+  border-radius: 8px;
+  color: var(--text-secondary);
+}
+
+.calendar-table td.today {
+  color: #1a1a0a;
+  background: var(--gold);
+  font-weight: 900;
+}
+
+.calendar-table td.empty {
+  color: transparent;
+}
+
+.calendar-info {
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.stats-vertical {
+  display: grid;
+  gap: 12px;
+}
+
+.stats-chart-wrap {
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--bg-secondary);
+}
+
+.stats-chart-wrap h4 {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.chart-placeholder {
+  min-height: 108px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(240, 192, 96, 0.08), rgba(96, 165, 250, 0.04));
+}
+
 .dashboard-grid {
   grid-template-columns: 280px 1fr 1fr;
 }
@@ -339,6 +652,14 @@ th {
 }
 
 @media (max-width: 1024px) {
+  .bento-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bento-col-middle {
+    grid-column: 1 / -1;
+  }
+
   .dashboard-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -360,9 +681,14 @@ th {
   }
 
   .auth-gate,
+  .bento-grid,
   .dashboard-grid,
   .admin-grid {
     grid-template-columns: 1fr;
+  }
+
+  .bento-col-middle {
+    grid-column: auto;
   }
 
   .actions,
@@ -375,6 +701,11 @@ th {
   }
 
   .placeholder-list {
+    grid-template-columns: 1fr;
+  }
+
+  .checkin-grid,
+  .growth-grid {
     grid-template-columns: 1fr;
   }
 

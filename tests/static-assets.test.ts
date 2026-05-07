@@ -18,6 +18,13 @@ describe("static web assets", () => {
     expect(script).toContain("/api/auth/request-phone-code");
     expect(script).toContain("/api/auth/register-phone");
     expect(script).toContain("/api/me/password");
+    expect(script).toContain("能力雷达");
+    expect(script).toContain("碎碎念");
+    expect(script).toContain("年度目标");
+    expect(script).toContain("八维成长进度");
+    expect(script).toContain("数据趋势");
+    expect(script).toContain("calendarBody");
+    expect(script).toContain("recordBody");
     expect(html).toContain("userManagementModal");
     expect(html).toContain("注册");
     expect(html).toContain("设置密码");

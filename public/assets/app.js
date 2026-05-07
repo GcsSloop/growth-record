@@ -45,7 +45,7 @@ async function requestRegisterCode() {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    status.textContent = "验证码发送失败，请检查手机号。";
+    status.textContent = authErrorMessage(payload.error?.code, "验证码发送失败，请检查手机号。");
     return;
   }
   status.textContent = payload.data?.devCode ? `开发环境验证码：${payload.data.devCode}` : "验证码已发送。";
@@ -63,8 +63,9 @@ async function registerWithPhone(event) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ phone, code })
   });
+  const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    status.textContent = "注册失败，请检查验证码。";
+    status.textContent = authErrorMessage(payload.error?.code, "注册失败，请检查验证码。");
     return;
   }
   status.textContent = "";
@@ -108,6 +109,18 @@ function showAppState() {
     node.removeAttribute("hidden");
   });
   void renderDashboardShell();
+}
+
+function authErrorMessage(code, fallback) {
+  const messages = {
+    invalid_phone: "请输入有效手机号。",
+    sms_not_configured: "短信服务未配置，请联系管理员。",
+    sms_provider_unsupported: "短信服务配置不受支持，请联系管理员。",
+    sms_delivery_failed: "验证码发送失败，请稍后重试。",
+    phone_already_registered: "该手机号已注册，请直接登录。",
+    invalid_code: "验证码无效或已过期。"
+  };
+  return messages[code] ?? fallback;
 }
 
 async function renderDashboardShell() {

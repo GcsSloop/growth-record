@@ -101,6 +101,16 @@ Users can register with a phone verification code. Successful registration creat
 
 Phone code delivery requires an SMS provider. Cloudflare does not provide a general application SMS OTP product for this use case. For local development only, set `DEV_SMS_CODES=true` to return the generated verification code in the API response. Do not enable this setting on a public deployment.
 
+Production SMS delivery is handled through a webhook adapter:
+
+```bash
+wrangler secret put SMS_API_KEY
+wrangler secret put SMS_WEBHOOK_URL
+wrangler secret put SMS_PROVIDER # use: webhook
+```
+
+The webhook receives `phone`, `purpose`, `code`, and `expiresInMinutes` as JSON. The Worker only stores a usable verification code after the provider configuration is valid and the delivery request succeeds.
+
 ## Desktop Clients
 
 The Tauri 2 desktop shell wraps the same web experience for macOS and Windows.

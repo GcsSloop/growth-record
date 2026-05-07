@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { handleRequest } from "../src/worker/router";
 import type { Env } from "../src/worker/types";
 
@@ -791,15 +791,64 @@ describe("admin authentication bootstrap", () => {
   });
 
   it("does not expose phone codes when SMS is not configured", async () => {
+    const database = new FakeD1Database();
     const response = await handleRequest(
       new Request("https://example.com/api/auth/request-phone-code", {
         method: "POST",
         body: JSON.stringify({ phone: "13300133000", purpose: "register" })
       }),
-      env(new FakeD1Database(), { DEV_SMS_CODES: undefined, SMS_PROVIDER: undefined })
+      env(database, { DEV_SMS_CODES: undefined, SMS_PROVIDER: undefined })
     );
 
     expect(response.status).toBe(501);
+    expect(database.phoneCodes).toHaveLength(0);
+  });
+
+  it("does not claim to send phone codes for unsupported SMS providers", async () => {
+    const database = new FakeD1Database();
+    const response = await handleRequest(
+      new Request("https://example.com/api/auth/request-phone-code", {
+        method: "POST",
+        body: JSON.stringify({ phone: "13300133001", purpose: "register" })
+      }),
+      env(database, { DEV_SMS_CODES: undefined, SMS_PROVIDER: "unknown" })
+    );
+
+    expect(response.status).toBe(501);
+    expect(database.phoneCodes).toHaveLength(0);
+  });
+
+  it("stores phone codes after webhook SMS delivery succeeds", async () => {
+    const database = new FakeD1Database();
+    const requests: Array<{ url: string; init?: RequestInit }> = [];
+    vi.stubGlobal("fetch", async (url: string, init?: RequestInit) => {
+      requests.push({ url, init });
+      return new Response("ok", { status: 200 });
+    });
+
+    try {
+      const response = await handleRequest(
+        new Request("https://example.com/api/auth/request-phone-code", {
+          method: "POST",
+          body: JSON.stringify({ phone: "13300133002", purpose: "register" })
+        }),
+        env(database, {
+          DEV_SMS_CODES: undefined,
+          SMS_PROVIDER: "webhook",
+          SMS_WEBHOOK_URL: "https://sms.example/send",
+          SMS_API_KEY: "sms-key"
+        })
+      );
+      const payload = (await json(response)) as { data: { devCode?: string } };
+
+      expect(response.status).toBe(200);
+      expect(payload.data.devCode).toBeUndefined();
+      expect(database.phoneCodes).toHaveLength(1);
+      expect(requests[0]).toMatchObject({ url: "https://sms.example/send" });
+      expect(requests[0].init?.headers).toMatchObject({ authorization: "Bearer sms-key" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("isolates dashboard and record APIs by authenticated user", async () => {

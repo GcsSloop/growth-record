@@ -18,6 +18,8 @@ describe("static web assets", () => {
     expect(script).toContain("/api/dashboard");
     expect(script).toContain("/api/auth/request-phone-code");
     expect(script).toContain("/api/auth/register-phone");
+    expect(script).toContain("sms_not_configured");
+    expect(script).toContain("短信服务未配置");
     expect(script).toContain("/api/me/password");
     expect(script).toContain("能力雷达");
     expect(script).toContain("碎碎念");

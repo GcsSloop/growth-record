@@ -149,6 +149,9 @@ export async function handleRequestPhoneCode(request: Request, env: Env): Promis
   if (purpose !== "register" && purpose !== "login") return apiError("invalid_purpose", "Invalid code purpose.", 400);
 
   const code = generateVerificationCode();
+  const deliveryError = await deliverVerificationCode(env, phone, purpose, code);
+  if (deliveryError) return deliveryError;
+
   const codeHash = await hashVerificationCode(phone, purpose, code, env);
   await env.DB.prepare(
     "INSERT INTO phone_verification_codes (id, phone, code_hash, purpose, expires_at, created_at) VALUES (?, ?, ?, ?, datetime('now', '+10 minutes'), datetime('now'))"
@@ -156,15 +159,10 @@ export async function handleRequestPhoneCode(request: Request, env: Env): Promis
     .bind(crypto.randomUUID(), phone, codeHash, purpose)
     .run();
 
-  const allowDevCode = env.DEV_SMS_CODES === "true";
-  if (!env.SMS_PROVIDER && !allowDevCode) {
-    return apiError("sms_not_configured", "SMS provider is not configured.", 501);
-  }
-
   return json({
     sent: true,
     purpose,
-    devCode: allowDevCode ? code : undefined
+    devCode: env.DEV_SMS_CODES === "true" ? code : undefined
   });
 }
 
@@ -619,6 +617,51 @@ async function verifyPhoneCode(env: Env, phone: string, purpose: "register" | "l
   if (!stored) return false;
   const providedHash = await hashVerificationCode(phone, purpose, code, env);
   return providedHash === stored.code_hash;
+}
+
+async function deliverVerificationCode(
+  env: Env,
+  phone: string,
+  purpose: "register" | "login",
+  code: string
+): Promise<Response | null> {
+  if (env.DEV_SMS_CODES === "true") return null;
+
+  const provider = env.SMS_PROVIDER?.trim().toLowerCase();
+  if (!provider) {
+    return apiError("sms_not_configured", "SMS provider is not configured.", 501);
+  }
+
+  if (provider !== "webhook") {
+    return apiError("sms_provider_unsupported", "Configured SMS provider is not supported.", 501);
+  }
+
+  if (!env.SMS_WEBHOOK_URL) {
+    return apiError("sms_not_configured", "SMS webhook URL is not configured.", 501);
+  }
+
+  try {
+    const response = await fetch(env.SMS_WEBHOOK_URL, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(env.SMS_API_KEY ? { authorization: `Bearer ${env.SMS_API_KEY}` } : {})
+      },
+      body: JSON.stringify({
+        phone,
+        purpose,
+        code,
+        expiresInMinutes: 10
+      })
+    });
+    if (!response.ok) {
+      return apiError("sms_delivery_failed", "SMS provider rejected the verification code request.", 502);
+    }
+  } catch {
+    return apiError("sms_delivery_failed", "SMS provider could not be reached.", 502);
+  }
+
+  return null;
 }
 
 async function consumePhoneCode(env: Env, phone: string, purpose: "register" | "login"): Promise<void> {

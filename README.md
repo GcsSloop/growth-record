@@ -72,6 +72,27 @@ Deploy:
 npm run deploy
 ```
 
+## Admin Bootstrap
+
+The default administrator account is `admin`.
+
+On first visit to `/admin`, the system checks `/api/admin/bootstrap`. If the admin password has not been configured, the page shows only the password setup form. After the password is configured, `/admin` shows only the admin login form until an admin session is established.
+
+To enable backend-only admin password recovery, set a secret reset key:
+
+```bash
+npx wrangler secret put ADMIN_RESET_KEY
+```
+
+Then an operator with access to the deployment secret can clear the admin password state:
+
+```bash
+curl -X POST https://growth-record.gcssloop.workers.dev/api/admin/reset-password \
+  -H "x-admin-reset-key: <ADMIN_RESET_KEY>"
+```
+
+After reset, `/admin` returns to the first-visit password setup state. Do not expose `ADMIN_RESET_KEY` in frontend code, logs, or documentation.
+
 ## Desktop Clients
 
 The Tauri 2 desktop shell wraps the same web experience for macOS and Windows.

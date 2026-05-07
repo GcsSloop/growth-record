@@ -1,4 +1,11 @@
 import { findApiRoute } from "./api-routes";
+import {
+  handleAdminBootstrap,
+  handleAdminResetPassword,
+  handleAdminSetupPassword,
+  handleCurrentUser,
+  handlePasswordLogin
+} from "./auth";
 import { apiError, json, notFound, notImplemented } from "./http";
 import type { Env } from "./types";
 
@@ -11,6 +18,26 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
       service: "growth-record",
       storage: Boolean(env.DB)
     });
+  }
+
+  if (url.pathname === "/api/admin/bootstrap" && request.method === "GET") {
+    return handleAdminBootstrap(env);
+  }
+
+  if (url.pathname === "/api/admin/setup-password" && request.method === "POST") {
+    return handleAdminSetupPassword(request, env);
+  }
+
+  if (url.pathname === "/api/admin/reset-password" && request.method === "POST") {
+    return handleAdminResetPassword(request, env);
+  }
+
+  if (url.pathname === "/api/auth/login-password" && request.method === "POST") {
+    return handlePasswordLogin(request, env);
+  }
+
+  if (url.pathname === "/api/me" && request.method === "GET") {
+    return handleCurrentUser(request, env);
   }
 
   if (url.pathname.startsWith("/api/")) {

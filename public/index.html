@@ -14,8 +14,7 @@
           <h1>园中月努力可视化系统</h1>
           <p>自由才是我永恒的向往</p>
         </div>
-        <nav class="actions" aria-label="主要操作">
-          <a class="button ghost" href="/admin">管理后台</a>
+        <nav class="actions app-only" aria-label="主要操作" hidden>
           <button class="button primary" id="checkinButton" type="button">打卡</button>
         </nav>
       </header>
@@ -24,9 +23,9 @@
         <div>
           <p class="eyebrow">需要认证</p>
           <h2>登录后访问你的成长记录</h2>
-          <p>当前页面会通过 /api/me 校验会话。后续 PDCA 循环会接入手机号注册、账号密码登录和手机号验证码登录。</p>
+          <p>请输入账号信息登录。未登录前不会显示个人记录、统计数据或后台入口。</p>
         </div>
-        <form class="login-panel" id="loginPreview">
+        <form class="login-panel" id="loginForm">
           <label>
             手机号或用户名
             <input name="account" autocomplete="username" placeholder="手机号 / 用户名">
@@ -35,30 +34,10 @@
             密码或验证码
             <input name="credential" autocomplete="current-password" placeholder="密码 / 验证码">
           </label>
-          <button class="button primary" type="button">登录占位</button>
+          <button class="button primary" type="button">登录</button>
         </form>
       </section>
-
-      <section class="dashboard-grid" aria-label="成长概览">
-        <article class="card hero-stat">
-          <span class="badge">LV</span>
-          <strong>--</strong>
-          <p>等待 /api/me 和 /api/records 接入 D1 数据</p>
-        </article>
-        <article class="card">
-          <h2>今日打卡状态</h2>
-          <div class="placeholder-list">
-            <span>科研学习</span>
-            <span>自媒体</span>
-            <span>运动健身</span>
-            <span>编程能力</span>
-          </div>
-        </article>
-        <article class="card">
-          <h2>执行记录</h2>
-          <p class="muted">后续会从 /api/records 读取当前用户自己的数据。</p>
-        </article>
-      </section>
+      <section id="appContent" hidden></section>
     </main>
   </body>
 </html>

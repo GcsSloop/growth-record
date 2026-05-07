@@ -4,6 +4,7 @@ export interface Env {
   SMS_PROVIDER?: string;
   SMS_API_KEY?: string;
   APP_ORIGIN?: string;
+  ADMIN_RESET_KEY?: string;
 }
 
 export interface ApiErrorBody {

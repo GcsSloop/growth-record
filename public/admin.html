@@ -12,32 +12,62 @@
       <header class="topbar">
         <div>
           <h1>管理后台</h1>
-          <p>用户数据、用户数量和活跃度监测</p>
+          <p>管理员认证后访问用户和活跃度数据</p>
         </div>
-        <nav class="actions" aria-label="后台操作">
+        <nav class="actions admin-only" aria-label="后台操作" hidden>
           <a class="button ghost" href="/">返回首页</a>
         </nav>
       </header>
 
-      <section class="admin-grid">
+      <section class="auth-gate" id="adminAuthGate">
+        <div>
+          <p class="eyebrow">管理员认证</p>
+          <h2 id="adminAuthTitle">管理员登录</h2>
+          <p id="adminAuthHint">默认管理员账号为 admin。首次访问时需要设置管理员密码。</p>
+        </div>
+        <form class="login-panel" id="adminLoginForm">
+          <label>
+            管理员账号
+            <input name="account" autocomplete="username" value="admin">
+          </label>
+          <label>
+            管理员密码
+            <input name="password" autocomplete="current-password" type="password" placeholder="输入管理员密码">
+          </label>
+          <button class="button primary" type="submit">进入后台</button>
+        </form>
+        <form class="login-panel" id="adminSetupForm" hidden>
+          <label>
+            设置 admin 密码
+            <input name="password" autocomplete="new-password" type="password" placeholder="至少 8 位">
+          </label>
+          <label>
+            确认密码
+            <input name="confirmPassword" autocomplete="new-password" type="password" placeholder="再次输入">
+          </label>
+          <button class="button primary" type="submit">保存管理员密码</button>
+        </form>
+      </section>
+
+      <section class="admin-grid admin-only" hidden>
         <article class="metric-card">
-          <span>用户数量</span>
+          <span data-label="users"></span>
           <strong id="totalUsers">--</strong>
         </article>
         <article class="metric-card">
-          <span>今日活跃</span>
+          <span data-label="active"></span>
           <strong id="activeToday">--</strong>
         </article>
         <article class="metric-card">
-          <span>本周打卡</span>
+          <span data-label="records"></span>
           <strong id="weeklyRecords">--</strong>
         </article>
       </section>
 
-      <section class="card">
+      <section class="card admin-only" hidden>
         <div class="section-heading">
-          <h2>用户数据</h2>
-          <p>/api/admin/users 与 /api/admin/metrics 将在后续循环接入。</p>
+          <h2>用户列表</h2>
+          <p>已通过管理员认证，仅显示后台数据。</p>
         </div>
         <div class="table-wrap">
           <table>

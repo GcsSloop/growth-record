@@ -43,6 +43,9 @@ Every implementation cycle must be small and committed separately:
 - Treat phone verification codes as short-lived secrets.
 - Do not log passwords, verification codes, session tokens, or API keys.
 - Keep `.dev.vars` and `.env*` files out of Git.
+- The default admin username is `admin`; the password is configured on first `/admin` visit.
+- Admin password recovery must require backend configuration access through `ADMIN_RESET_KEY`.
+- Never expose `ADMIN_RESET_KEY` to browser code or public documentation examples with a real value.
 
 ## Frontend Rules
 

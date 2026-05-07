@@ -8,15 +8,17 @@
     <script defer src="/assets/app.js"></script>
   </head>
   <body>
-    <main class="shell">
-      <header class="topbar">
-        <div>
-          <h1>园中月努力可视化系统</h1>
-          <p>自由才是我永恒的向往</p>
+    <main class="shell app-container">
+      <header class="topbar header">
+        <div class="header-left">
+          <h1 class="header-title">✨ 园中月努力可视化系统</h1>
+          <p class="header-subtitle">自由才是我永恒的向往</p>
         </div>
-        <nav class="actions app-only" aria-label="主要操作" hidden>
-          <button class="button ghost" id="openUserManagement" type="button">用户管理</button>
-          <button class="button primary" id="checkinButton" type="button">打卡</button>
+        <nav class="actions action-bar app-only" aria-label="主要操作" hidden>
+          <button class="btn btn-primary" id="checkinButton" type="button">➕ 打卡</button>
+          <button class="btn btn-outline" type="button" disabled>📂 存档</button>
+          <button class="btn btn-outline btn-sm" id="openUserManagement" type="button">⚙️ 设置</button>
+          <button class="btn-theme" type="button" title="切换主题">🌙</button>
         </nav>
       </header>
 

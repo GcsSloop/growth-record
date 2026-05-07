@@ -1,0 +1,10 @@
+name = "growth-record"
+main = "src/worker/index.ts"
+compatibility_date = "2026-05-07"
+assets = { directory = "./public" }
+
+[[d1_databases]]
+binding = "DB"
+database_name = "growth-record"
+database_id = "00000000-0000-0000-0000-000000000000"
+preview_database_id = "00000000-0000-0000-0000-000000000000"

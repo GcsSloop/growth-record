@@ -1,0 +1,25 @@
+{
+  "name": "growth-record",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cloudflare Worker and Pages project for a personal growth record system.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "quality": "npm run typecheck && npm run test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260507.0",
+    "@vitest/coverage-v8": "^4.0.8",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.8",
+    "wrangler": "^4.50.0"
+  }
+}

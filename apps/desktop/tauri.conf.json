@@ -4,15 +4,15 @@
   "version": "0.1.0",
   "identifier": "com.gcssloop.growthrecord",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:8787",
-    "frontendDist": "../public"
+    "devUrl": "https://growth-record.gcssloop.workers.dev",
+    "frontendDist": "../../public"
   },
   "app": {
     "windows": [
       {
         "label": "main",
         "title": "园中月努力可视化系统",
+        "url": "https://growth-record.gcssloop.workers.dev",
         "width": 1280,
         "height": 860,
         "minWidth": 390,

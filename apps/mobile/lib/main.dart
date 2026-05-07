@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
 
-const String defaultWebUrl = 'https://growth-record.pages.dev';
+const String defaultWebUrl = 'https://growth-record.gcssloop.workers.dev';
 
 void main() {
   runApp(const GrowthRecordApp());
@@ -20,9 +23,178 @@ class GrowthRecordApp extends StatelessWidget {
           seedColor: const Color(0xfff0c060),
           brightness: Brightness.dark,
         ),
+        scaffoldBackgroundColor: const Color(0xff0d0f1a),
         useMaterial3: true,
       ),
-      home: const GrowthRecordWebView(),
+      home: const NativeAuthGate(),
+    );
+  }
+}
+
+class NativeAuthGate extends StatefulWidget {
+  const NativeAuthGate({super.key});
+
+  @override
+  State<NativeAuthGate> createState() => _NativeAuthGateState();
+}
+
+class _NativeAuthGateState extends State<NativeAuthGate> {
+  static const webUrl = String.fromEnvironment('GROWTH_RECORD_WEB_URL', defaultValue: defaultWebUrl);
+  final accountController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  bool registering = false;
+  bool loading = false;
+  String status = '';
+
+  @override
+  void dispose() {
+    accountController.dispose();
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> submit() async {
+    setState(() {
+      loading = true;
+      status = '';
+    });
+
+    final endpoint = registering ? '/api/auth/register-email' : '/api/auth/login-password';
+    final body = registering
+        ? {'email': emailController.text.trim(), 'password': passwordController.text}
+        : {'account': accountController.text.trim(), 'password': passwordController.text};
+
+    try {
+      final response = await http.post(
+        Uri.parse('$webUrl$endpoint'),
+        headers: {'content-type': 'application/json'},
+        body: jsonEncode(body),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        setState(() {
+          status = registering ? '注册失败，请检查邮箱和密码。' : '登录失败，请检查账号和密码。';
+        });
+        return;
+      }
+
+      final cookie = _extractSessionCookie(response.headers['set-cookie']);
+      if (cookie == null) {
+        setState(() {
+          status = '登录状态写入失败，请稍后重试。';
+        });
+        return;
+      }
+
+      await WebViewCookieManager().setCookie(
+        WebViewCookie(
+          name: 'growth_session',
+          value: cookie,
+          domain: Uri.parse(webUrl).host,
+          path: '/',
+        ),
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const GrowthRecordWebView()),
+      );
+    } catch (_) {
+      setState(() {
+        status = '网络连接失败，请稍后重试。';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
+    }
+  }
+
+  String? _extractSessionCookie(String? setCookie) {
+    if (setCookie == null) return null;
+    final match = RegExp(r'growth_session=([^;]+)').firstMatch(setCookie);
+    return match?.group(1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    '园中月努力可视化系统',
+                    style: TextStyle(
+                      color: Color(0xfff8d478),
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text('自由才是我永恒的向往', style: TextStyle(color: Color(0xffa8aab8))),
+                  const SizedBox(height: 28),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('登录')),
+                      ButtonSegment(value: true, label: Text('注册')),
+                    ],
+                    selected: {registering},
+                    onSelectionChanged: loading
+                        ? null
+                        : (value) {
+                            setState(() {
+                              registering = value.first;
+                              status = '';
+                            });
+                          },
+                  ),
+                  const SizedBox(height: 18),
+                  if (registering)
+                    TextField(
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.email],
+                      decoration: const InputDecoration(labelText: '邮箱'),
+                    )
+                  else
+                    TextField(
+                      controller: accountController,
+                      keyboardType: TextInputType.emailAddress,
+                      autofillHints: const [AutofillHints.username],
+                      decoration: const InputDecoration(labelText: '邮箱或用户名'),
+                    ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    autofillHints: const [AutofillHints.password],
+                    decoration: const InputDecoration(labelText: '密码'),
+                    onSubmitted: (_) => loading ? null : submit(),
+                  ),
+                  const SizedBox(height: 18),
+                  FilledButton(
+                    onPressed: loading ? null : submit,
+                    child: loading
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : Text(registering ? '注册并进入' : '登录'),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(status, style: const TextStyle(color: Color(0xfff0c060))),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -51,9 +223,7 @@ class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xff0d0f1a),
-      body: SafeArea(
-        child: WebViewWidget(controller: controller),
-      ),
+      body: SafeArea(child: WebViewWidget(controller: controller)),
     );
   }
 }

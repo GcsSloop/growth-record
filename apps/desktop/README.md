@@ -8,7 +8,7 @@ This directory contains the Tauri 2 desktop shell for macOS and Windows.
 npm run desktop:dev
 ```
 
-The desktop development build starts the Cloudflare Worker dev server through `npm run dev` and opens the Tauri WebView at `http://localhost:8787`.
+The desktop development build opens the deployed Growth Record Worker URL in the Tauri WebView.
 
 ## Build
 

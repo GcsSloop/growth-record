@@ -2,7 +2,7 @@
 
 Growth Record is a personal growth check-in system being migrated from a single static HTML page to a Cloudflare-native web application.
 
-The target deployment uses Cloudflare Workers for API and access control, Cloudflare Pages-compatible static assets for the web UI, D1 for SQLite storage, and Flutter WebView shells for iOS and Android.
+The target deployment uses Cloudflare Workers for API and access control, Cloudflare Pages-compatible static assets for the web UI, D1 for SQLite storage, Flutter clients for iOS and Android, and Tauri 2 clients for macOS and Windows.
 
 ## Features
 
@@ -11,8 +11,8 @@ The target deployment uses Cloudflare Workers for API and access control, Cloudf
 - D1 database binding and migration workspace
 - Authenticated web app and `/admin` management route planned
 - Quality gate with TypeScript checks and Vitest coverage thresholds
-- Flutter mobile shell planned under `apps/mobile`
-- Tauri 2 desktop shell for macOS and Windows under `src-tauri`
+- Flutter mobile client under `apps/mobile`
+- Tauri 2 desktop client for macOS and Windows under `apps/desktop`
 
 ## Project Status
 
@@ -103,7 +103,7 @@ The user model keeps an optional phone field for admin-managed profile data, but
 
 ## Desktop Clients
 
-The Tauri 2 desktop shell wraps the same web experience for macOS and Windows.
+The Tauri 2 desktop client opens the deployed Growth Record web experience for macOS and Windows.
 
 ```bash
 npm run desktop:dev
@@ -112,6 +112,28 @@ npm run desktop:build:windows
 ```
 
 macOS bundles should be built on macOS. Windows bundles should be built on Windows unless a dedicated cross-compilation pipeline is added.
+
+## Mobile Clients
+
+The Flutter mobile client uses native email/password authentication before opening the authenticated web experience in a WebView. This avoids shipping a bare WebView-only app and keeps the iOS build closer to App Store review expectations for WebApp-based products: native account entry, native shell structure, and an authenticated content surface.
+
+```bash
+npm run mobile:build:android
+npm run mobile:build:ios
+```
+
+iOS release builds use `--no-codesign` by default so the archive can be produced locally without App Store signing credentials. Final App Store submission still requires a valid Apple Developer account, signing certificates, provisioning profiles, privacy disclosures, and review-ready native behavior.
+
+## Release Artifacts
+
+Native build outputs are collected under versioned folders in `release/`, for example:
+
+```text
+release/v0.1.0/growth_record-darwin-arm64-v0.1.0.app
+release/v0.1.0/growth_record-darwin-arm64-v0.1.0.dmg
+release/v0.1.0/growth_record-android-arm64-v0.1.0.apk
+release/v0.1.0/growth_record-ios-arm64-v0.1.0.app
+```
 
 ## Development Workflow
 
@@ -130,10 +152,11 @@ Work is split into PDCA cycles. Each cycle should:
 ├── docs/plans/                      # PDCA plans and implementation notes
 ├── migrations/                      # Cloudflare D1 SQL migrations
 ├── public/                          # Pages-compatible static web assets
-├── src-tauri/                       # Tauri 2 desktop client for macOS/Windows
 ├── src/worker/                      # Cloudflare Worker API
 ├── tests/                           # Unit tests
-└── apps/mobile/                     # Flutter WebView shell
+└── apps/
+    ├── desktop/                     # Tauri 2 desktop client for macOS/Windows
+    └── mobile/                      # Flutter client for Android/iOS
 ```
 
 ## License

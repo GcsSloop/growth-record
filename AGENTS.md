@@ -33,7 +33,8 @@ Every implementation cycle must be small and committed separately:
 - Admin routes must require an admin role.
 - Static web assets live in `public/`.
 - Worker API code lives in `src/worker/`.
-- Tauri desktop client code lives in `src-tauri/`.
+- Tauri desktop client code lives in `apps/desktop/`.
+- Flutter mobile client code lives in `apps/mobile/`.
 - Shared type-safe helpers should be small and tested.
 
 ## Security Rules
@@ -56,7 +57,7 @@ Every implementation cycle must be small and committed separately:
 
 ## Mobile Rules
 
-- Flutter apps are WebView shells first.
+- Flutter apps use native authentication first, then open the authenticated web experience in a WebView.
 - The web URL must be configurable for local, staging, and production builds.
 - Do not add store publishing metadata until requested.
 

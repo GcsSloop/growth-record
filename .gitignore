@@ -4,12 +4,17 @@ coverage/
 .wrangler/
 .DS_Store
 *.log
+release/
 
 # Flutter
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
 build/
+
+# Tauri/Rust build outputs
+apps/desktop/target/
+apps/desktop/gen/
 
 # Local secrets
 .dev.vars

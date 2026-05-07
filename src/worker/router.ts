@@ -13,12 +13,14 @@ import {
   handleDashboard,
   handleDeleteRecord,
   handleEmailRegistration,
+  handleGetSettings,
   handleListRecords,
   handlePasswordLogin,
   handlePhoneRegistration,
   handleRequestPhoneCode,
   handleSetCurrentUserPassword,
-  handleUpdateRecord
+  handleUpdateRecord,
+  handleUpdateSettings
 } from "./auth";
 import { apiError, json, notFound, notImplemented } from "./http";
 import type { Env } from "./types";
@@ -109,6 +111,14 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   }
   if (recordMatch && request.method === "DELETE") {
     return handleDeleteRecord(request, env, recordMatch[1]);
+  }
+
+  if (url.pathname === "/api/settings" && request.method === "GET") {
+    return handleGetSettings(request, env);
+  }
+
+  if (url.pathname === "/api/settings" && request.method === "PUT") {
+    return handleUpdateSettings(request, env);
   }
 
   if (url.pathname.startsWith("/api/")) {

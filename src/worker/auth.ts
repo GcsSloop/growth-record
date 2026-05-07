@@ -43,7 +43,41 @@ interface GrowthRecord {
   exp: number;
 }
 
+interface UserSettingsRow {
+  user_id: string;
+  title: string;
+  subtitle: string;
+  dimensions_json: string;
+  descriptions_json: string;
+  dimension_level_exp_json: string;
+  goals_json: string;
+  quotes_json: string;
+  theme: "dark" | "light";
+}
+
+interface UserSettingsPayload {
+  title: string;
+  subtitle: string;
+  dimensions: string[];
+  descriptions: Record<string, string>;
+  dimensionLevelExp: Record<string, number>;
+  goals: string[];
+  quotes: Array<{ id: string; date: string; text: string }>;
+  theme: "dark" | "light";
+}
+
 const DEFAULT_DIMENSIONS = ["科研学习", "自媒体", "运动健身", "化妆技术", "电竞操作", "表达能力", "剪辑技能", "编程能力"];
+const DEFAULT_DESCRIPTIONS: Record<string, string> = {
+  科研学习: "论文阅读、科研推进、知识沉淀",
+  自媒体: "内容策划、发布、运营复盘",
+  运动健身: "训练、拉伸、体能管理",
+  化妆技术: "审美练习、妆容实践",
+  电竞操作: "操作训练、复盘、战术理解",
+  表达能力: "写作、演讲、沟通训练",
+  剪辑技能: "视频剪辑、素材整理、节奏练习",
+  编程能力: "功能开发、调试、工程能力"
+};
+const DEFAULT_LEVEL_EXP = 200;
 
 export async function handleAdminBootstrap(env: Env): Promise<Response> {
   const admin = await ensureAdminUser(env);
@@ -392,16 +426,13 @@ export async function handleDashboard(request: Request, env: Env): Promise<Respo
   const session = await getSession(request, env);
   if (!session) return apiError("unauthorized", "Authentication is required.", 401);
   const records = await listUserRecords(env, session.user.id);
+  const settings = await getUserSettings(env, session.user.id);
   await refreshSession(env, session.tokenHash);
 
   return json({
     user: session.user,
-    title: "园中月努力可视化系统",
-    subtitle: "自由才是我永恒的向往",
-    dimensions: DEFAULT_DIMENSIONS,
+    ...settings,
     records,
-    goals: ["建立稳定成长记录", "把打卡变成可复盘的数据"],
-    quotes: [{ id: "default", date: new Date().toISOString().slice(0, 10), text: "慢慢来，每天进步一点点。" }]
   });
 }
 
@@ -462,6 +493,54 @@ export async function handleDeleteRecord(request: Request, env: Env, recordId: s
   await env.DB.prepare("DELETE FROM growth_records WHERE id = ? AND user_id = ?").bind(recordId, session.user.id).run();
   await refreshSession(env, session.tokenHash);
   return json({ deleted: true });
+}
+
+export async function handleGetSettings(request: Request, env: Env): Promise<Response> {
+  const session = await getSession(request, env);
+  if (!session) return apiError("unauthorized", "Authentication is required.", 401);
+  const settings = await getUserSettings(env, session.user.id);
+  await refreshSession(env, session.tokenHash);
+  return json(settings);
+}
+
+export async function handleUpdateSettings(request: Request, env: Env): Promise<Response> {
+  const session = await getSession(request, env);
+  if (!session) return apiError("unauthorized", "Authentication is required.", 401);
+  const body = await readJsonBody<Partial<UserSettingsPayload>>(request);
+  const settings = normalizeSettingsInput(body);
+  if (settings instanceof Response) return settings;
+
+  await env.DB.prepare(
+    `INSERT INTO user_settings (
+      user_id, title, subtitle, dimensions_json, descriptions_json, dimension_level_exp_json,
+      goals_json, quotes_json, theme, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    ON CONFLICT(user_id) DO UPDATE SET
+      title = excluded.title,
+      subtitle = excluded.subtitle,
+      dimensions_json = excluded.dimensions_json,
+      descriptions_json = excluded.descriptions_json,
+      dimension_level_exp_json = excluded.dimension_level_exp_json,
+      goals_json = excluded.goals_json,
+      quotes_json = excluded.quotes_json,
+      theme = excluded.theme,
+      updated_at = datetime('now')`
+  )
+    .bind(
+      session.user.id,
+      settings.title,
+      settings.subtitle,
+      JSON.stringify(settings.dimensions),
+      JSON.stringify(settings.descriptions),
+      JSON.stringify(settings.dimensionLevelExp),
+      JSON.stringify(settings.goals),
+      JSON.stringify(settings.quotes),
+      settings.theme
+    )
+    .run();
+
+  await refreshSession(env, session.tokenHash);
+  return json(settings);
 }
 
 async function ensureAdminUser(env: Env): Promise<AdminUser> {
@@ -537,6 +616,100 @@ async function listUserRecords(env: Env, userId: string): Promise<Array<ReturnTy
     .bind(userId)
     .all<GrowthRecord>();
   return (result.results ?? []).map(publicRecord);
+}
+
+async function getUserSettings(env: Env, userId: string): Promise<UserSettingsPayload> {
+  const result = await env.DB.prepare(
+    "SELECT user_id, title, subtitle, dimensions_json, descriptions_json, dimension_level_exp_json, goals_json, quotes_json, theme FROM user_settings WHERE user_id = ?"
+  )
+    .bind(userId)
+    .all<UserSettingsRow>();
+  const row = result.results?.[0];
+  if (!row) return defaultSettings();
+  return {
+    title: row.title || "✨ 园中月努力可视化系统",
+    subtitle: row.subtitle || "自由才是我永恒的向往",
+    dimensions: parseJsonArray(row.dimensions_json, DEFAULT_DIMENSIONS),
+    descriptions: parseJsonObject(row.descriptions_json, DEFAULT_DESCRIPTIONS),
+    dimensionLevelExp: parseJsonObject(row.dimension_level_exp_json, defaultLevelExp()),
+    goals: parseJsonArray(row.goals_json, defaultSettings().goals),
+    quotes: parseJsonArray(row.quotes_json, defaultSettings().quotes),
+    theme: row.theme === "light" ? "light" : "dark"
+  };
+}
+
+function defaultSettings(): UserSettingsPayload {
+  return {
+    title: "✨ 园中月努力可视化系统",
+    subtitle: "自由才是我永恒的向往",
+    dimensions: [...DEFAULT_DIMENSIONS],
+    descriptions: { ...DEFAULT_DESCRIPTIONS },
+    dimensionLevelExp: defaultLevelExp(),
+    goals: ["建立稳定成长记录", "把打卡变成可复盘的数据"],
+    quotes: [{ id: "default", date: new Date().toISOString().slice(0, 10), text: "慢慢来，每天进步一点点。" }],
+    theme: "dark"
+  };
+}
+
+function defaultLevelExp(): Record<string, number> {
+  return Object.fromEntries(DEFAULT_DIMENSIONS.map((dimension) => [dimension, DEFAULT_LEVEL_EXP]));
+}
+
+function normalizeSettingsInput(body: Partial<UserSettingsPayload>): Response | UserSettingsPayload {
+  const title = body.title?.trim() || "✨ 园中月努力可视化系统";
+  const subtitle = body.subtitle?.trim() || "自由才是我永恒的向往";
+  const dimensions = Array.isArray(body.dimensions)
+    ? body.dimensions.map((dimension) => String(dimension).trim()).filter(Boolean).slice(0, 12)
+    : [...DEFAULT_DIMENSIONS];
+  if (!dimensions.length) return apiError("invalid_settings", "At least one dimension is required.", 400);
+
+  const descriptions = typeof body.descriptions === "object" && body.descriptions ? body.descriptions : {};
+  const dimensionLevelExp = typeof body.dimensionLevelExp === "object" && body.dimensionLevelExp ? body.dimensionLevelExp : {};
+  const goals = Array.isArray(body.goals) ? body.goals.map((goal) => String(goal).trim()).filter(Boolean).slice(0, 20) : [];
+  const quotes = Array.isArray(body.quotes)
+    ? body.quotes
+        .map((quote) => ({
+          id: String(quote.id || crypto.randomUUID()),
+          date: String(quote.date || new Date().toISOString().slice(0, 10)),
+          text: String(quote.text || "").trim()
+        }))
+        .filter((quote) => quote.text)
+        .slice(0, 20)
+    : [];
+
+  return {
+    title,
+    subtitle,
+    dimensions,
+    descriptions: Object.fromEntries(dimensions.map((dimension) => [dimension, String(descriptions[dimension] || "")])),
+    dimensionLevelExp: Object.fromEntries(
+      dimensions.map((dimension) => {
+        const value = Number(dimensionLevelExp[dimension]);
+        return [dimension, Number.isFinite(value) && value > 0 ? Math.round(value) : DEFAULT_LEVEL_EXP];
+      })
+    ),
+    goals: goals.length ? goals : ["建立稳定成长记录", "把打卡变成可复盘的数据"],
+    quotes: quotes.length ? quotes : [{ id: "default", date: new Date().toISOString().slice(0, 10), text: "慢慢来，每天进步一点点。" }],
+    theme: body.theme === "light" ? "light" : "dark"
+  };
+}
+
+function parseJsonArray<T>(value: string, fallback: T[]): T[] {
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function parseJsonObject<T extends Record<string, unknown>>(value: string, fallback: T): T {
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as T) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 function publicRecord(record: GrowthRecord) {

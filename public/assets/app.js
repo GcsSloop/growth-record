@@ -1,3 +1,9 @@
+const THEME_KEY = "growth_record_theme";
+const DEFAULT_DIMENSIONS = ["科研学习", "自媒体", "运动健身", "化妆技术", "电竞操作", "表达能力", "剪辑技能", "编程能力"];
+let dashboardState = null;
+let currentFilterDate = null;
+let draftSettings = null;
+
 async function checkSession() {
   const statusNode = document.getElementById("authGate");
   if (!statusNode) return;
@@ -108,6 +114,9 @@ async function renderDashboardShell() {
   if (!appContent || appContent.dataset.rendered === "true") return;
 
   const dashboard = await fetchDashboardData();
+  dashboardState = dashboard;
+  applySettingsToHeader(dashboard);
+  applyTheme(dashboard.theme || localStorage.getItem(THEME_KEY) || "dark");
   const dimensions = dashboard.dimensions;
   const records = dashboard.records;
   const totalExp = records.reduce((sum, record) => sum + Number(record.exp || 0), 0);
@@ -193,7 +202,7 @@ async function renderDashboardShell() {
       <article class="card record-card">
         <div class="card-header" style="justify-content:space-between;">
           <span><span class="icon-dot green"></span> 执行记录</span>
-          <span class="muted small-label">全部记录</span>
+          <button class="link-button small-label" id="recordFilterLabel" type="button">全部记录</button>
         </div>
         <div class="record-table-wrap">
           <table class="record-table">
@@ -208,7 +217,7 @@ async function renderDashboardShell() {
                 <th>操作</th>
               </tr>
             </thead>
-            <tbody id="recordBody">${renderRecordRows(records)}</tbody>
+            <tbody id="recordBody">${renderRecordRows(filteredRecords(records))}</tbody>
           </table>
         </div>
       </article>
@@ -235,6 +244,7 @@ async function renderDashboardShell() {
   appContent.dataset.rendered = "true";
   appContent.hidden = false;
   drawDashboardCanvases(dashboard, records, dimensions, today);
+  bindDashboardInteractions();
 }
 
 async function fetchDashboardData() {
@@ -244,7 +254,12 @@ async function fetchDashboardData() {
       dimensions: ["科研学习", "自媒体", "运动健身", "化妆技术", "电竞操作", "表达能力", "剪辑技能", "编程能力"],
       records: [],
       goals: ["建立稳定成长记录", "把打卡变成可复盘的数据"],
-      quotes: [{ id: "default", date: formatDate(new Date()), text: "慢慢来，每天进步一点点。" }]
+      quotes: [{ id: "default", date: formatDate(new Date()), text: "慢慢来，每天进步一点点。" }],
+      title: "✨ 园中月努力可视化系统",
+      subtitle: "自由才是我永恒的向往",
+      descriptions: {},
+      dimensionLevelExp: {},
+      theme: localStorage.getItem(THEME_KEY) || "dark"
     };
   }
   const payload = await response.json();
@@ -263,10 +278,14 @@ function renderRecordRows(records) {
           <td>${Number(record.hours)}小时</td>
           <td>${escapeHtml(record.description)}</td>
           <td><span class="exp-badge">+${Number(record.exp)}</span></td>
-          <td><button class="button ghost" type="button" disabled>删除</button></td>
+          <td><button class="btn-danger-text" data-delete-record="${escapeHtml(record.id)}" type="button">🗑️</button></td>
         </tr>`
     )
     .join("");
+}
+
+function filteredRecords(records) {
+  return currentFilterDate ? records.filter((record) => record.date === currentFilterDate) : [...records];
 }
 
 function renderCalendarRows(today, records) {
@@ -280,7 +299,7 @@ function renderCalendarRows(today, records) {
   for (let day = 1; day <= daysInMonth; day += 1) {
     const date = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const classes = [day === today.getDate() ? "today" : "", recordDates.has(date) ? "has-record" : ""].filter(Boolean).join(" ");
-    cells.push(`<td class="${classes}">${day}</td>`);
+    cells.push(`<td class="${classes}" data-calendar-date="${date}">${day}</td>`);
   }
   while (cells.length % 7 !== 0) cells.push("<td class='empty'>·</td>");
   const rows = [];
@@ -297,6 +316,62 @@ function drawDashboardCanvases(_dashboard, records, dimensions, today) {
   drawBarChart7(records, today);
   drawLineChartMonth(records, today);
   drawPieChart(dimensions, records);
+}
+
+function refreshDashboard() {
+  const appContent = document.getElementById("appContent");
+  if (!appContent) return;
+  appContent.dataset.rendered = "false";
+  void renderDashboardShell();
+}
+
+async function reloadDashboard() {
+  const appContent = document.getElementById("appContent");
+  if (!appContent) return;
+  appContent.dataset.rendered = "false";
+  appContent.innerHTML = "";
+  await renderDashboardShell();
+}
+
+function applySettingsToHeader(settings) {
+  const title = document.querySelector(".header-title");
+  const subtitle = document.querySelector(".header-subtitle");
+  if (title) title.textContent = settings.title || "✨ 园中月努力可视化系统";
+  if (subtitle) subtitle.textContent = settings.subtitle || "自由才是我永恒的向往";
+  document.title = String(settings.title || "园中月努力可视化系统").replace(/^✨\s*/, "");
+}
+
+function applyTheme(theme) {
+  const normalized = theme === "light" ? "light" : "dark";
+  document.body.classList.toggle("light-theme", normalized === "light");
+  const button = document.getElementById("themeToggleBtn");
+  if (button) button.textContent = normalized === "light" ? "☀️" : "🌙";
+  localStorage.setItem(THEME_KEY, normalized);
+}
+
+async function toggleTheme() {
+  const nextTheme = document.body.classList.contains("light-theme") ? "dark" : "light";
+  applyTheme(nextTheme);
+  if (dashboardState) {
+    dashboardState.theme = nextTheme;
+    await saveSettingsPayload(dashboardState, false);
+    setTimeout(() => drawDashboardCanvases(dashboardState, dashboardState.records, dashboardState.dimensions, new Date()), 80);
+  }
+}
+
+function bindDashboardInteractions() {
+  const filterLabel = document.getElementById("recordFilterLabel");
+  if (filterLabel) filterLabel.textContent = currentFilterDate ? `${currentFilterDate} 记录` : "全部记录";
+  filterLabel?.addEventListener("click", showAllRecords);
+  document.querySelectorAll("[data-calendar-date]").forEach((cell) => {
+    cell.addEventListener("click", () => openArchiveModal(cell.dataset.calendarDate));
+  });
+  document.querySelectorAll("[data-delete-record]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      void deleteRecord(button.dataset.deleteRecord);
+    });
+  });
 }
 
 function setupCanvas(canvas) {
@@ -468,6 +543,244 @@ function escapeHtml(value) {
   return div.innerHTML;
 }
 
+function calcCheckinExp(hours) {
+  let exp = Math.round(Number(hours || 0) * 10);
+  if (hours >= 4) exp = Math.round(exp * 1.2);
+  else if (hours >= 2.5) exp = Math.round(exp * 1.1);
+  return exp;
+}
+
+function showToast(message, type = "info") {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+function openCheckinModal() {
+  if (!dashboardState) return;
+  document.getElementById("checkinDate").value = formatDate(new Date());
+  document.getElementById("checkinHours").value = "1";
+  document.getElementById("checkinDesc").value = "";
+  const select = document.getElementById("checkinDimension");
+  select.innerHTML = dashboardState.dimensions.map((dimension) => `<option value="${escapeHtml(dimension)}">${escapeHtml(dimension)}</option>`).join("");
+  updateExpPreview();
+  document.getElementById("checkinModal").hidden = false;
+}
+
+function closeCheckinModal() {
+  document.getElementById("checkinModal").hidden = true;
+}
+
+function updateExpPreview() {
+  const hours = Number(document.getElementById("checkinHours")?.value || 0);
+  const preview = document.getElementById("expPreview");
+  if (preview) preview.textContent = `预计经验：+${calcCheckinExp(hours)}`;
+}
+
+async function submitCheckin(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const date = form.elements.date.value;
+  const dimension = form.elements.dimension.value;
+  const hours = Number(form.elements.hours.value);
+  const description = form.elements.description.value.trim() || "未描述";
+  if (!date || !dimension || !Number.isFinite(hours) || hours <= 0 || hours > 12) {
+    showToast("请填写完整，时长不超过 12 小时", "warning");
+    return;
+  }
+  const response = await fetch("/api/records", {
+    method: "POST",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ date, dimension, hours, description })
+  });
+  if (!response.ok) {
+    showToast("打卡失败，请稍后重试", "warning");
+    return;
+  }
+  const payload = await response.json();
+  dashboardState.records.unshift(payload.data.record);
+  closeCheckinModal();
+  showToast(`🎉 打卡成功！+${payload.data.record.exp} 经验`, "success");
+  await reloadDashboard();
+}
+
+function openArchiveModal(date = formatDate(new Date())) {
+  const input = document.getElementById("archiveDate");
+  input.value = date;
+  previewArchiveDate();
+  document.getElementById("archiveModal").hidden = false;
+}
+
+function closeArchiveModal() {
+  document.getElementById("archiveModal").hidden = true;
+}
+
+function previewArchiveDate() {
+  const date = document.getElementById("archiveDate")?.value;
+  const preview = document.getElementById("archivePreview");
+  if (!date || !preview || !dashboardState) return;
+  const records = dashboardState.records.filter((record) => record.date === date);
+  const exp = records.reduce((sum, record) => sum + Number(record.exp || 0), 0);
+  preview.textContent = records.length ? `📅 ${date}：共 ${records.length} 条记录，累计 +${exp} 经验` : `📅 ${date}：暂无记录`;
+}
+
+async function jumpToArchiveDate() {
+  const date = document.getElementById("archiveDate")?.value;
+  if (!date) return;
+  currentFilterDate = date;
+  closeArchiveModal();
+  await reloadDashboard();
+  showToast(`已筛选 ${date} 的记录`, "info");
+}
+
+async function showAllRecords() {
+  currentFilterDate = null;
+  closeArchiveModal();
+  await reloadDashboard();
+}
+
+async function deleteRecord(recordId) {
+  if (!recordId || !confirm("确定删除这条记录？")) return;
+  const response = await fetch(`/api/records/${encodeURIComponent(recordId)}`, {
+    method: "DELETE",
+    credentials: "include"
+  });
+  if (!response.ok) {
+    showToast("删除失败", "warning");
+    return;
+  }
+  dashboardState.records = dashboardState.records.filter((record) => record.id !== recordId);
+  showToast("记录已删除", "success");
+  await reloadDashboard();
+}
+
+function openSettingsModal() {
+  if (!dashboardState) return;
+  draftSettings = structuredClone({
+    title: dashboardState.title,
+    subtitle: dashboardState.subtitle,
+    dimensions: dashboardState.dimensions || DEFAULT_DIMENSIONS,
+    descriptions: dashboardState.descriptions || {},
+    dimensionLevelExp: dashboardState.dimensionLevelExp || {},
+    goals: dashboardState.goals || [],
+    quotes: dashboardState.quotes || [],
+    theme: dashboardState.theme || localStorage.getItem(THEME_KEY) || "dark"
+  });
+  document.getElementById("settingsTitle").value = draftSettings.title;
+  document.getElementById("settingsSubtitle").value = draftSettings.subtitle;
+  document.getElementById("settingsNewQuoteDate").value = formatDate(new Date());
+  renderSettingsLists();
+  document.getElementById("settingsModal").hidden = false;
+}
+
+function closeSettingsModal() {
+  document.getElementById("settingsModal").hidden = true;
+}
+
+function renderSettingsLists() {
+  renderSettingsGoalList();
+  renderSettingsQuoteList();
+  renderSettingsDimList();
+}
+
+function renderSettingsGoalList() {
+  const container = document.getElementById("settingsGoalList");
+  container.innerHTML = (draftSettings.goals || [])
+    .map((goal, index) => `<div class="settings-row"><input value="${escapeHtml(goal)}" data-goal-index="${index}"><button class="btn-danger-text" data-remove-goal="${index}" type="button">🗑️</button></div>`)
+    .join("");
+}
+
+function renderSettingsQuoteList() {
+  const container = document.getElementById("settingsQuoteList");
+  container.innerHTML = (draftSettings.quotes || [])
+    .map(
+      (quote, index) => `<div class="settings-row settings-quote-row"><input type="date" value="${escapeHtml(quote.date)}" data-quote-date="${index}"><input value="${escapeHtml(quote.text)}" data-quote-text="${index}"><button class="btn-danger-text" data-remove-quote="${index}" type="button">🗑️</button></div>`
+    )
+    .join("");
+}
+
+function renderSettingsDimList() {
+  const container = document.getElementById("settingsDimList");
+  container.innerHTML = (draftSettings.dimensions || [])
+    .map(
+      (dimension, index) => `<div class="settings-dim-row"><input value="${escapeHtml(dimension)}" data-dim-name="${index}" placeholder="维度名称"><input type="number" min="1" step="1" value="${Number(draftSettings.dimensionLevelExp?.[dimension] || 200)}" data-dim-exp="${index}" placeholder="每级经验"><input value="${escapeHtml(draftSettings.descriptions?.[dimension] || "")}" data-dim-desc="${index}" placeholder="描述"></div>`
+    )
+    .join("");
+}
+
+function syncSettingsDraftFromDom() {
+  if (!draftSettings) return;
+  draftSettings.title = document.getElementById("settingsTitle").value.trim() || "✨ 园中月努力可视化系统";
+  draftSettings.subtitle = document.getElementById("settingsSubtitle").value.trim() || "自由才是我永恒的向往";
+  document.querySelectorAll("[data-goal-index]").forEach((input) => {
+    draftSettings.goals[Number(input.dataset.goalIndex)] = input.value.trim();
+  });
+  document.querySelectorAll("[data-quote-date]").forEach((input) => {
+    draftSettings.quotes[Number(input.dataset.quoteDate)].date = input.value;
+  });
+  document.querySelectorAll("[data-quote-text]").forEach((input) => {
+    draftSettings.quotes[Number(input.dataset.quoteText)].text = input.value.trim();
+  });
+  const nextDimensions = [];
+  const nextDescriptions = {};
+  const nextLevelExp = {};
+  document.querySelectorAll("[data-dim-name]").forEach((input) => {
+    const index = Number(input.dataset.dimName);
+    const name = input.value.trim();
+    if (!name) return;
+    nextDimensions.push(name);
+    nextDescriptions[name] = document.querySelector(`[data-dim-desc="${index}"]`)?.value.trim() || "";
+    const exp = Number(document.querySelector(`[data-dim-exp="${index}"]`)?.value || 200);
+    nextLevelExp[name] = Number.isFinite(exp) && exp > 0 ? Math.round(exp) : 200;
+  });
+  draftSettings.dimensions = nextDimensions.length ? nextDimensions : DEFAULT_DIMENSIONS;
+  draftSettings.descriptions = nextDescriptions;
+  draftSettings.dimensionLevelExp = nextLevelExp;
+  draftSettings.goals = draftSettings.goals.map((goal) => goal.trim()).filter(Boolean);
+  draftSettings.quotes = draftSettings.quotes.filter((quote) => quote.text);
+}
+
+async function saveSettingsPayload(settings, announce = true) {
+  const response = await fetch("/api/settings", {
+    method: "PUT",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(settings)
+  });
+  if (!response.ok) {
+    if (announce) showToast("设置保存失败", "warning");
+    return null;
+  }
+  const payload = await response.json();
+  return payload.data;
+}
+
+async function saveSettings() {
+  syncSettingsDraftFromDom();
+  const saved = await saveSettingsPayload(draftSettings);
+  if (!saved) return;
+  dashboardState = { ...dashboardState, ...saved };
+  closeSettingsModal();
+  showToast("设置已保存", "success");
+  await reloadDashboard();
+}
+
+function exportData() {
+  if (!dashboardState) return;
+  const blob = new Blob([JSON.stringify(dashboardState, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `growth_record_backup_${formatDate(new Date())}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 document.querySelectorAll("[data-auth-tab]").forEach((button) => {
   button.addEventListener("click", () => {
     const tab = button.dataset.authTab;
@@ -480,7 +793,56 @@ document.querySelectorAll("[data-auth-tab]").forEach((button) => {
 
 document.getElementById("loginForm")?.addEventListener("submit", loginWithPassword);
 document.getElementById("registerForm")?.addEventListener("submit", registerWithEmail);
+document.getElementById("checkinButton")?.addEventListener("click", openCheckinModal);
+document.getElementById("mobileCheckinButton")?.addEventListener("click", openCheckinModal);
+document.getElementById("archiveButton")?.addEventListener("click", () => openArchiveModal());
+document.getElementById("settingsButton")?.addEventListener("click", openSettingsModal);
+document.getElementById("themeToggleBtn")?.addEventListener("click", () => void toggleTheme());
+document.getElementById("checkinHours")?.addEventListener("input", updateExpPreview);
+document.getElementById("checkinForm")?.addEventListener("submit", submitCheckin);
+document.getElementById("closeCheckin")?.addEventListener("click", closeCheckinModal);
+document.getElementById("archiveDate")?.addEventListener("change", previewArchiveDate);
+document.getElementById("closeArchive")?.addEventListener("click", closeArchiveModal);
+document.getElementById("jumpArchiveDate")?.addEventListener("click", () => void jumpToArchiveDate());
+document.getElementById("showAllRecords")?.addEventListener("click", () => void showAllRecords());
+document.getElementById("closeSettings")?.addEventListener("click", closeSettingsModal);
+document.getElementById("saveSettings")?.addEventListener("click", () => void saveSettings());
+document.getElementById("settingsExportData")?.addEventListener("click", exportData);
+document.getElementById("settingsAddGoal")?.addEventListener("click", () => {
+  syncSettingsDraftFromDom();
+  const input = document.getElementById("settingsNewGoal");
+  const value = input.value.trim();
+  if (!value) return;
+  draftSettings.goals.push(value);
+  input.value = "";
+  renderSettingsGoalList();
+});
+document.getElementById("settingsAddQuote")?.addEventListener("click", () => {
+  syncSettingsDraftFromDom();
+  const dateInput = document.getElementById("settingsNewQuoteDate");
+  const textInput = document.getElementById("settingsNewQuoteText");
+  const text = textInput.value.trim();
+  if (!text) return;
+  draftSettings.quotes.push({ id: `q${Date.now()}`, date: dateInput.value || formatDate(new Date()), text });
+  textInput.value = "";
+  renderSettingsQuoteList();
+});
+document.getElementById("settingsGoalList")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-remove-goal]");
+  if (!button) return;
+  syncSettingsDraftFromDom();
+  draftSettings.goals.splice(Number(button.dataset.removeGoal), 1);
+  renderSettingsGoalList();
+});
+document.getElementById("settingsQuoteList")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-remove-quote]");
+  if (!button) return;
+  syncSettingsDraftFromDom();
+  draftSettings.quotes.splice(Number(button.dataset.removeQuote), 1);
+  renderSettingsQuoteList();
+});
 document.getElementById("openUserManagement")?.addEventListener("click", () => {
+  closeSettingsModal();
   document.getElementById("userManagementModal").hidden = false;
 });
 document.getElementById("closeUserManagement")?.addEventListener("click", () => {
@@ -488,6 +850,19 @@ document.getElementById("closeUserManagement")?.addEventListener("click", () => 
 });
 document.getElementById("userManagementModal")?.addEventListener("click", (event) => {
   if (event.target.id === "userManagementModal") event.currentTarget.hidden = true;
+});
+["checkinModal", "archiveModal", "settingsModal"].forEach((id) => {
+  document.getElementById(id)?.addEventListener("click", (event) => {
+    if (event.target.id === id) event.currentTarget.hidden = true;
+  });
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeCheckinModal();
+    closeArchiveModal();
+    closeSettingsModal();
+    document.getElementById("userManagementModal").hidden = true;
+  }
 });
 document.getElementById("setPasswordForm")?.addEventListener("submit", setCurrentUserPassword);
 

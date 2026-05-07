@@ -16,9 +16,9 @@
         </div>
         <nav class="actions action-bar app-only" aria-label="主要操作" hidden>
           <button class="btn btn-primary" id="checkinButton" type="button">➕ 打卡</button>
-          <button class="btn btn-outline" type="button" disabled>📂 存档</button>
-          <button class="btn btn-outline btn-sm" id="openUserManagement" type="button">⚙️ 设置</button>
-          <button class="btn-theme" type="button" title="切换主题">🌙</button>
+          <button class="btn btn-outline" id="archiveButton" type="button">📂 存档</button>
+          <button class="btn btn-outline btn-sm" id="settingsButton" type="button">⚙️ 设置</button>
+          <button class="btn-theme" id="themeToggleBtn" type="button" title="切换主题">🌙</button>
         </nav>
       </header>
 
@@ -60,6 +60,76 @@
       </section>
       <section id="appContent" hidden></section>
     </main>
+
+    <button class="fab app-only" id="mobileCheckinButton" type="button" hidden>➕</button>
+    <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+    <div class="modal-overlay" id="checkinModal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="checkinTitle">
+        <h2 id="checkinTitle">📝 今日打卡</h2>
+        <form id="checkinForm">
+          <label>日期<input type="date" name="date" id="checkinDate"></label>
+          <label>维度<select name="dimension" id="checkinDimension"></select></label>
+          <label>时长（小时）<input type="number" name="hours" id="checkinHours" value="1" min="0.5" max="12" step="0.5"></label>
+          <label>描述<input type="text" name="description" id="checkinDesc" placeholder="如：代码优化、内容创作..."></label>
+          <p class="form-status" id="expPreview">预计经验：+10</p>
+          <div class="actions">
+            <button class="button ghost" id="closeCheckin" type="button">取消</button>
+            <button class="button primary" type="submit">✅ 确认</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-overlay" id="archiveModal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="archiveTitle">
+        <h2 id="archiveTitle">📂 查看存档</h2>
+        <label>选择日期<input type="date" id="archiveDate"></label>
+        <div id="archivePreview" class="archive-preview"></div>
+        <div class="actions">
+          <button class="button ghost" id="closeArchive" type="button">取消</button>
+          <button class="button" id="showAllRecords" type="button">全部记录</button>
+          <button class="button primary" id="jumpArchiveDate" type="button">🔍 跳转</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-overlay" id="settingsModal" hidden>
+      <section class="modal modal-wide" role="dialog" aria-modal="true" aria-labelledby="settingsTitleLabel">
+        <h2 id="settingsTitleLabel">⚙️ 个人设置</h2>
+        <div class="settings-section">
+          <h4>显示信息</h4>
+          <label>主标题<input type="text" id="settingsTitle"></label>
+          <label>副标题<input type="text" id="settingsSubtitle"></label>
+        </div>
+        <div class="settings-section">
+          <h4>年度目标</h4>
+          <div id="settingsGoalList" class="settings-list"></div>
+          <div class="inline-fields"><input type="text" id="settingsNewGoal" placeholder="新目标..."><button class="button" id="settingsAddGoal" type="button">＋</button></div>
+        </div>
+        <div class="settings-section">
+          <h4>碎碎念</h4>
+          <div id="settingsQuoteList" class="settings-list"></div>
+          <div class="settings-inline-3"><input type="date" id="settingsNewQuoteDate"><input type="text" id="settingsNewQuoteText" placeholder="新感悟..."><button class="button" id="settingsAddQuote" type="button">＋</button></div>
+        </div>
+        <div class="settings-section">
+          <h4>成长维度</h4>
+          <div id="settingsDimList" class="settings-list"></div>
+        </div>
+        <div class="settings-section">
+          <h4>数据管理</h4>
+          <div class="actions">
+            <button class="button" id="settingsExportData" type="button">💾 导出</button>
+            <button class="button" id="openUserManagement" type="button">🔐 设置密码</button>
+          </div>
+        </div>
+        <p class="form-status" id="settingsStatus" aria-live="polite"></p>
+        <div class="actions">
+          <button class="button ghost" id="closeSettings" type="button">取消</button>
+          <button class="button primary" id="saveSettings" type="button">💾 保存</button>
+        </div>
+      </section>
+    </div>
 
     <div class="modal-overlay" id="userManagementModal" hidden>
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="userManagementTitle">

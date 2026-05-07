@@ -31,6 +31,7 @@ class FakeD1Database {
   sessions: Array<Record<string, unknown>> = [];
   phoneCodes: Array<Record<string, unknown>> = [];
   records: Array<Record<string, unknown>> = [];
+  settings = new Map<string, Record<string, unknown>>();
 
   prepare(sql: string): FakeStatement {
     return new FakeStatement(this, sql);
@@ -91,6 +92,14 @@ class FakeD1Database {
       return {
         ...fakeResult(),
         results: this.records.filter((record) => record.user_id === userId) as T[]
+      };
+    }
+    if (sql.includes("SELECT user_id, title, subtitle, dimensions_json")) {
+      const [userId] = _bindings;
+      const settings = this.settings.get(String(userId));
+      return {
+        ...fakeResult(),
+        results: settings ? ([settings] as T[]) : []
       };
     }
     throw new Error(`Unhandled all SQL: ${sql}`);
@@ -234,6 +243,22 @@ class FakeD1Database {
     if (sql.includes("DELETE FROM growth_records WHERE id = ? AND user_id = ?")) {
       const [id, userId] = bindings;
       this.records = this.records.filter((entry) => !(entry.id === id && entry.user_id === userId));
+      return fakeResult();
+    }
+    if (sql.includes("INSERT INTO user_settings")) {
+      const [userId, title, subtitle, dimensionsJson, descriptionsJson, dimensionLevelExpJson, goalsJson, quotesJson, theme] =
+        bindings;
+      this.settings.set(String(userId), {
+        user_id: userId,
+        title,
+        subtitle,
+        dimensions_json: dimensionsJson,
+        descriptions_json: descriptionsJson,
+        dimension_level_exp_json: dimensionLevelExpJson,
+        goals_json: goalsJson,
+        quotes_json: quotesJson,
+        theme
+      });
       return fakeResult();
     }
     throw new Error(`Unhandled run SQL: ${sql}`);
@@ -1125,5 +1150,100 @@ describe("admin authentication bootstrap", () => {
     );
     expect(remove.status).toBe(200);
     expect(database.records).toHaveLength(0);
+  });
+
+  it("stores settings per authenticated user and applies them to dashboard data", async () => {
+    const database = new FakeD1Database();
+    const testEnv = env(database);
+    const register = await handleRequest(
+      new Request("https://example.com/api/auth/register-email", {
+        method: "POST",
+        body: JSON.stringify({ email: "settings@example.com", password: "SettingsPassword123" })
+      }),
+      testEnv
+    );
+    const cookie = register.headers.get("set-cookie")?.split(";")[0] ?? "";
+
+    const update = await handleRequest(
+      new Request("https://example.com/api/settings", {
+        method: "PUT",
+        headers: { cookie },
+        body: JSON.stringify({
+          title: "自定义成长系统",
+          subtitle: "今日也要推进一点",
+          dimensions: ["科研学习", "编程能力"],
+          goals: ["完成一个功能"],
+          quotes: [{ id: "q1", date: "2026-05-08", text: "先把闭环跑通。" }],
+          theme: "light"
+        })
+      }),
+      testEnv
+    );
+    expect(update.status).toBe(200);
+
+    const settings = await handleRequest(new Request("https://example.com/api/settings", { headers: { cookie } }), testEnv);
+    await expect(json(settings)).resolves.toMatchObject({
+      data: {
+        title: "自定义成长系统",
+        dimensions: ["科研学习", "编程能力"],
+        theme: "light"
+      }
+    });
+
+    const dashboard = await handleRequest(new Request("https://example.com/api/dashboard", { headers: { cookie } }), testEnv);
+    await expect(json(dashboard)).resolves.toMatchObject({
+      data: {
+        title: "自定义成长系统",
+        subtitle: "今日也要推进一点",
+        dimensions: ["科研学习", "编程能力"],
+        goals: ["完成一个功能"]
+      }
+    });
+  });
+
+  it("validates settings and falls back when stored settings are malformed", async () => {
+    const database = new FakeD1Database();
+    const testEnv = env(database);
+    const register = await handleRequest(
+      new Request("https://example.com/api/auth/register-email", {
+        method: "POST",
+        body: JSON.stringify({ email: "settings-fallback@example.com", password: "SettingsPassword123" })
+      }),
+      testEnv
+    );
+    const cookie = register.headers.get("set-cookie")?.split(";")[0] ?? "";
+    const userId = String(database.sessions[0].user_id);
+
+    const invalid = await handleRequest(
+      new Request("https://example.com/api/settings", {
+        method: "PUT",
+        headers: { cookie },
+        body: JSON.stringify({ dimensions: [] })
+      }),
+      testEnv
+    );
+    expect(invalid.status).toBe(400);
+
+    database.settings.set(userId, {
+      user_id: userId,
+      title: "",
+      subtitle: "",
+      dimensions_json: "{bad",
+      descriptions_json: "{bad",
+      dimension_level_exp_json: "{bad",
+      goals_json: "\"not-array\"",
+      quotes_json: "\"not-array\"",
+      theme: "dark"
+    });
+
+    const fallback = await handleRequest(new Request("https://example.com/api/settings", { headers: { cookie } }), testEnv);
+    await expect(json(fallback)).resolves.toMatchObject({
+      data: {
+        title: "✨ 园中月努力可视化系统",
+        subtitle: "自由才是我永恒的向往",
+        dimensions: ["科研学习", "自媒体", "运动健身", "化妆技术", "电竞操作", "表达能力", "剪辑技能", "编程能力"],
+        theme: "dark"
+      }
+    });
   });
 });

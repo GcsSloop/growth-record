@@ -13,7 +13,9 @@ describe("Flutter mobile shell scaffold", () => {
     const pubspec = read("apps/mobile/pubspec.yaml");
 
     expect(pubspec).toContain("name: growth_record_mobile");
-    expect(pubspec).toContain("webview_flutter:");
+    expect(pubspec).toContain('sdk: ">=3.8.0 <4.0.0"');
+    expect(pubspec).toContain("webview_flutter: ^4.13.1");
+    expect(pubspec).toContain("flutter_lints: ^6.0.0");
   });
 
   it("loads the configured web app URL", () => {
@@ -22,5 +24,11 @@ describe("Flutter mobile shell scaffold", () => {
     expect(main).toContain("GROWTH_RECORD_WEB_URL");
     expect(main).toContain("WebViewController");
     expect(main).toContain("园中月努力可视化系统");
+  });
+
+  it("enables Flutter lint rules", () => {
+    const analysisOptions = read("apps/mobile/analysis_options.yaml");
+
+    expect(analysisOptions).toContain("include: package:flutter_lints/flutter.yaml");
   });
 });

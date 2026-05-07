@@ -9,6 +9,12 @@ flutter pub get
 flutter run --dart-define=GROWTH_RECORD_WEB_URL=http://localhost:8787
 ```
 
+## Dependency Baseline
+
+- Dart SDK: `>=3.8.0 <4.0.0`
+- `webview_flutter`: `^4.13.1`
+- `flutter_lints`: `^6.0.0`
+
 For production builds, point `GROWTH_RECORD_WEB_URL` to the deployed Cloudflare Pages or Worker URL.
 
 ## Platform Projects

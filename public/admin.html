@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>管理后台 - 园中月努力可视化系统</title>
+    <link rel="stylesheet" href="/assets/app.css">
+    <script defer src="/assets/admin.js"></script>
+  </head>
+  <body>
+    <main class="shell admin-shell">
+      <header class="topbar">
+        <div>
+          <h1>管理后台</h1>
+          <p>用户数据、用户数量和活跃度监测</p>
+        </div>
+        <nav class="actions" aria-label="后台操作">
+          <a class="button ghost" href="/">返回首页</a>
+        </nav>
+      </header>
+
+      <section class="admin-grid">
+        <article class="metric-card">
+          <span>用户数量</span>
+          <strong id="totalUsers">--</strong>
+        </article>
+        <article class="metric-card">
+          <span>今日活跃</span>
+          <strong id="activeToday">--</strong>
+        </article>
+        <article class="metric-card">
+          <span>本周打卡</span>
+          <strong id="weeklyRecords">--</strong>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="section-heading">
+          <h2>用户数据</h2>
+          <p>/api/admin/users 与 /api/admin/metrics 将在后续循环接入。</p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>用户</th>
+                <th>手机号</th>
+                <th>角色</th>
+                <th>状态</th>
+                <th>最近活跃</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody">
+              <tr>
+                <td colspan="5">等待管理员 API 数据</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

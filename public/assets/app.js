@@ -27,45 +27,28 @@ async function loginWithPassword(event) {
     body: JSON.stringify({ account, password })
   });
   if (!response.ok) {
-    status.textContent = "登录失败，请检查手机号和密码。";
+    status.textContent = "登录失败，请检查邮箱、用户名和密码。";
     return;
   }
   status.textContent = "";
   showAppState();
 }
 
-async function requestRegisterCode() {
-  const status = document.getElementById("authStatus");
-  const phone = document.querySelector("#registerForm input[name='phone']").value.trim();
-  const response = await fetch("/api/auth/request-phone-code", {
-    method: "POST",
-    credentials: "include",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ phone, purpose: "register" })
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    status.textContent = authErrorMessage(payload.error?.code, "验证码发送失败，请检查手机号。");
-    return;
-  }
-  status.textContent = payload.data?.devCode ? `开发环境验证码：${payload.data.devCode}` : "验证码已发送。";
-}
-
-async function registerWithPhone(event) {
+async function registerWithEmail(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const status = document.getElementById("authStatus");
-  const phone = form.elements.phone.value.trim();
-  const code = form.elements.code.value.trim();
-  const response = await fetch("/api/auth/register-phone", {
+  const email = form.elements.email.value.trim();
+  const password = form.elements.password.value;
+  const response = await fetch("/api/auth/register-email", {
     method: "POST",
     credentials: "include",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ phone, code })
+    body: JSON.stringify({ email, password })
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    status.textContent = authErrorMessage(payload.error?.code, "注册失败，请检查验证码。");
+    status.textContent = authErrorMessage(payload.error?.code, "注册失败，请检查邮箱和密码。");
     return;
   }
   status.textContent = "";
@@ -113,12 +96,9 @@ function showAppState() {
 
 function authErrorMessage(code, fallback) {
   const messages = {
-    invalid_phone: "请输入有效手机号。",
-    sms_not_configured: "短信服务未配置，请联系管理员。",
-    sms_provider_unsupported: "短信服务配置不受支持，请联系管理员。",
-    sms_delivery_failed: "验证码发送失败，请稍后重试。",
-    phone_already_registered: "该手机号已注册，请直接登录。",
-    invalid_code: "验证码无效或已过期。"
+    invalid_email: "请输入有效邮箱。",
+    weak_password: "密码至少需要 8 位。",
+    email_already_registered: "该邮箱已注册，请直接登录。"
   };
   return messages[code] ?? fallback;
 }
@@ -335,8 +315,7 @@ document.querySelectorAll("[data-auth-tab]").forEach((button) => {
 });
 
 document.getElementById("loginForm")?.addEventListener("submit", loginWithPassword);
-document.getElementById("requestRegisterCode")?.addEventListener("click", requestRegisterCode);
-document.getElementById("registerForm")?.addEventListener("submit", registerWithPhone);
+document.getElementById("registerForm")?.addEventListener("submit", registerWithEmail);
 document.getElementById("openUserManagement")?.addEventListener("click", () => {
   document.getElementById("userManagementModal").hidden = false;
 });

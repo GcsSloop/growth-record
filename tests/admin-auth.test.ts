@@ -37,11 +37,14 @@ class FakeD1Database {
   }
 
   async first<T>(sql: string, bindings: unknown[]): Promise<T | null> {
-    if (sql.includes("SELECT id, phone, username, role, status, display_name, must_change_password")) {
+    if (sql.includes("SELECT id, email, phone, username, role, status, display_name, must_change_password")) {
       return (this.users.get(String(bindings[0])) as T) ?? null;
     }
     if (sql.includes("password_hash") && sql.includes("FROM users WHERE username = ?")) {
       return (this.findUserByAccount(String(bindings[0])) as T) ?? null;
+    }
+    if (sql.includes("SELECT id FROM users WHERE email = ?")) {
+      return (this.findUserByEmail(String(bindings[0])) as T) ?? null;
     }
     if (sql.includes("FROM users WHERE phone = ?")) {
       return (this.findUserByPhone(String(bindings[0])) as T) ?? null;
@@ -60,6 +63,7 @@ class FakeD1Database {
       if (!user) return null;
       return {
         id: user.id,
+        email: user.email,
         username: user.username,
         role: user.role,
         status: user.status
@@ -76,7 +80,7 @@ class FakeD1Database {
   }
 
   async all<T>(sql: string, _bindings: unknown[] = []): Promise<D1Result<T>> {
-    if (sql.includes("SELECT id, phone, username, role, status, display_name, must_change_password")) {
+    if (sql.includes("SELECT id, email, phone, username, role, status, display_name, must_change_password")) {
       return {
         ...fakeResult(),
         results: [...this.users.values()] as T[]
@@ -93,10 +97,20 @@ class FakeD1Database {
   }
 
   async run(sql: string, bindings: unknown[]): Promise<D1Result> {
-    if (sql.includes("INSERT INTO users") && sql.includes("must_change_password")) {
-      const [id, phone, username, passwordHash, passwordSalt, role, status, displayName] = bindings;
+    if (sql.includes("INSERT INTO users") && sql.includes("password_hash") && sql.includes("must_change_password")) {
+      const [id, email, maybePhone, maybeUsername, maybePasswordHash, maybePasswordSalt, maybeRole, maybeStatus, maybeDisplayName] =
+        bindings;
+      const isEmailRegistration = sql.includes("?, ?, NULL, NULL");
+      const phone = isEmailRegistration ? null : maybePhone;
+      const username = isEmailRegistration ? null : maybeUsername;
+      const passwordHash = isEmailRegistration ? maybePhone : maybePasswordHash;
+      const passwordSalt = isEmailRegistration ? maybeUsername : maybePasswordSalt;
+      const role = isEmailRegistration ? maybePasswordHash : maybeRole;
+      const status = isEmailRegistration ? maybePasswordSalt : maybeStatus;
+      const displayName = isEmailRegistration ? maybeRole : maybeDisplayName;
       this.users.set(String(id), {
         id,
+        email,
         phone,
         username,
         password_hash: passwordHash,
@@ -104,19 +118,23 @@ class FakeD1Database {
         role,
         status,
         display_name: displayName,
-        must_change_password: true
+        must_change_password: !isEmailRegistration
       });
       return fakeResult();
     }
     if (sql.includes("INSERT INTO users")) {
       const isGeneratedUsername = !sql.includes("NULL");
-      const [id, phone] = bindings;
-      const username = isGeneratedUsername ? bindings[2] : null;
-      const role = isGeneratedUsername ? bindings[3] : bindings[2];
-      const status = isGeneratedUsername ? bindings[4] : bindings[3];
-      const displayName = isGeneratedUsername ? bindings[5] : bindings[4];
+      const [id] = bindings;
+      const usesEmailColumns = sql.includes("id, email, phone");
+      const email = usesEmailColumns ? null : undefined;
+      const phone = usesEmailColumns ? null : bindings[1];
+      const username = usesEmailColumns ? bindings[1] : isGeneratedUsername ? bindings[2] : null;
+      const role = usesEmailColumns ? bindings[2] : isGeneratedUsername ? bindings[3] : bindings[2];
+      const status = usesEmailColumns ? bindings[3] : isGeneratedUsername ? bindings[4] : bindings[3];
+      const displayName = usesEmailColumns ? bindings[4] : isGeneratedUsername ? bindings[5] : bindings[4];
       this.users.set(String(id), {
         id,
+        email,
         phone,
         username,
         role,
@@ -174,10 +192,10 @@ class FakeD1Database {
       }
       return fakeResult();
     }
-    if (sql.includes("UPDATE users SET phone = ?")) {
-      const [phone, username, role, status, displayName, id] = bindings;
+    if (sql.includes("UPDATE users SET email = ?")) {
+      const [email, phone, username, role, status, displayName, id] = bindings;
       const user = this.users.get(String(id));
-      if (user) Object.assign(user, { phone, username, role, status, display_name: displayName });
+      if (user) Object.assign(user, { email, phone, username, role, status, display_name: displayName });
       return fakeResult();
     }
     if (sql.includes("DELETE FROM users WHERE id = ?")) {
@@ -229,8 +247,12 @@ class FakeD1Database {
     return [...this.users.values()].find((user) => user.phone === phone);
   }
 
+  private findUserByEmail(email: string): Record<string, unknown> | undefined {
+    return [...this.users.values()].find((user) => user.email === email);
+  }
+
   private findUserByAccount(account: string): Record<string, unknown> | undefined {
-    return this.findUserByUsername(account) ?? this.findUserByPhone(account);
+    return this.findUserByUsername(account) ?? this.findUserByEmail(account) ?? this.findUserByPhone(account);
   }
 }
 
@@ -434,25 +456,15 @@ describe("admin authentication bootstrap", () => {
     expect(invalidCookie.status).toBe(401);
   });
 
-  it("registers a phone user with a verification code and creates a 30 day session", async () => {
+  it("registers an email user and creates a 30 day session", async () => {
     const database = new FakeD1Database();
     const testEnv = env(database);
-    const phone = "13800138000";
-
-    const codeResponse = await handleRequest(
-      new Request("https://example.com/api/auth/request-phone-code", {
-        method: "POST",
-        body: JSON.stringify({ phone, purpose: "register" })
-      }),
-      testEnv
-    );
-    expect(codeResponse.status).toBe(200);
-    const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
+    const email = "user@example.com";
 
     const register = await handleRequest(
-      new Request("https://example.com/api/auth/register-phone", {
+      new Request("https://example.com/api/auth/register-email", {
         method: "POST",
-        body: JSON.stringify({ phone, code: codePayload.data.devCode })
+        body: JSON.stringify({ email, password: "UserPassword123" })
       }),
       testEnv
     );
@@ -462,7 +474,7 @@ describe("admin authentication bootstrap", () => {
     expect([...database.users.values()]).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          phone,
+          email,
           role: "user",
           status: "active"
         })
@@ -470,22 +482,14 @@ describe("admin authentication bootstrap", () => {
     );
   });
 
-  it("lets the current user set a password and then login by phone and password", async () => {
+  it("lets the current user set a password and then login by email and password", async () => {
     const database = new FakeD1Database();
     const testEnv = env(database);
-    const phone = "13900139000";
-    const codeResponse = await handleRequest(
-      new Request("https://example.com/api/auth/request-phone-code", {
-        method: "POST",
-        body: JSON.stringify({ phone, purpose: "register" })
-      }),
-      testEnv
-    );
-    const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
+    const email = "user-password@example.com";
     const register = await handleRequest(
-      new Request("https://example.com/api/auth/register-phone", {
+      new Request("https://example.com/api/auth/register-email", {
         method: "POST",
-        body: JSON.stringify({ phone, code: codePayload.data.devCode })
+        body: JSON.stringify({ email, password: "InitialPassword123" })
       }),
       testEnv
     );
@@ -504,11 +508,52 @@ describe("admin authentication bootstrap", () => {
     const login = await handleRequest(
       new Request("https://example.com/api/auth/login-password", {
         method: "POST",
-        body: JSON.stringify({ account: phone, password: "UserPassword123" })
+        body: JSON.stringify({ account: email, password: "UserPassword123" })
       }),
       testEnv
     );
     expect(login.status).toBe(200);
+  });
+
+  it("rejects invalid email registration bodies and duplicate emails", async () => {
+    const database = new FakeD1Database();
+    const testEnv = env(database);
+
+    const invalidEmail = await handleRequest(
+      new Request("https://example.com/api/auth/register-email", {
+        method: "POST",
+        body: JSON.stringify({ email: "not-an-email", password: "UserPassword123" })
+      }),
+      testEnv
+    );
+    expect(invalidEmail.status).toBe(400);
+
+    const weakPassword = await handleRequest(
+      new Request("https://example.com/api/auth/register-email", {
+        method: "POST",
+        body: JSON.stringify({ email: "weak@example.com", password: "short" })
+      }),
+      testEnv
+    );
+    expect(weakPassword.status).toBe(400);
+
+    const first = await handleRequest(
+      new Request("https://example.com/api/auth/register-email", {
+        method: "POST",
+        body: JSON.stringify({ email: "Duplicate@Example.com", password: "UserPassword123" })
+      }),
+      testEnv
+    );
+    expect(first.status).toBe(200);
+
+    const duplicate = await handleRequest(
+      new Request("https://example.com/api/auth/register-email", {
+        method: "POST",
+        body: JSON.stringify({ email: "duplicate@example.com", password: "UserPassword123" })
+      }),
+      testEnv
+    );
+    expect(duplicate.status).toBe(409);
   });
 
   it("clears the admin password only with the backend reset key", async () => {
@@ -571,6 +616,7 @@ describe("admin authentication bootstrap", () => {
         method: "POST",
         headers: { cookie },
         body: JSON.stringify({
+          email: "alice@example.com",
           phone: "13700137000",
           username: "alice",
           displayName: "Alice",
@@ -595,8 +641,9 @@ describe("admin authentication bootstrap", () => {
       data: {
         users: expect.arrayContaining([
           expect.objectContaining({
-            username: "alice",
-            mustChangePassword: true
+          username: "alice",
+          email: "alice@example.com",
+          mustChangePassword: true
           })
         ])
       }
@@ -607,6 +654,7 @@ describe("admin authentication bootstrap", () => {
         method: "PATCH",
         headers: { cookie },
         body: JSON.stringify({
+          email: "alice-updated@example.com",
           phone: "13700137001",
           username: "alice-updated",
           displayName: "Alice Updated",
@@ -619,6 +667,7 @@ describe("admin authentication bootstrap", () => {
     expect(update.status).toBe(200);
     expect(database.users.get(createPayload.data.user.id)).toMatchObject({
       phone: "13700137001",
+      email: "alice-updated@example.com",
       username: "alice-updated",
       status: "disabled"
     });
@@ -651,7 +700,7 @@ describe("admin authentication bootstrap", () => {
       new Request("https://example.com/api/admin/users", {
         method: "POST",
         headers: { cookie },
-        body: JSON.stringify({ phone: "13600136000", username: "bob" })
+        body: JSON.stringify({ email: "bob@example.com", phone: "13600136000", username: "bob" })
       }),
       testEnv
     );
@@ -660,7 +709,7 @@ describe("admin authentication bootstrap", () => {
     const login = await handleRequest(
       new Request("https://example.com/api/auth/login-password", {
         method: "POST",
-        body: JSON.stringify({ account: "13600136000", password: createPayload.data.defaultPassword })
+        body: JSON.stringify({ account: "bob@example.com", password: createPayload.data.defaultPassword })
       }),
       testEnv
     );
@@ -685,7 +734,7 @@ describe("admin authentication bootstrap", () => {
     const normalLogin = await handleRequest(
       new Request("https://example.com/api/auth/login-password", {
         method: "POST",
-        body: JSON.stringify({ account: "13600136000", password: "BobPassword123" })
+        body: JSON.stringify({ account: "bob@example.com", password: "BobPassword123" })
       }),
       testEnv
     );
@@ -702,20 +751,12 @@ describe("admin authentication bootstrap", () => {
     const guestList = await handleRequest(new Request("https://example.com/api/admin/users"), env(database));
     expect(guestList.status).toBe(401);
 
-    const phone = "13500135000";
+    const email = "normal-user@example.com";
     const testEnv = env(database);
-    const codeResponse = await handleRequest(
-      new Request("https://example.com/api/auth/request-phone-code", {
-        method: "POST",
-        body: JSON.stringify({ phone, purpose: "register" })
-      }),
-      testEnv
-    );
-    const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
     const register = await handleRequest(
-      new Request("https://example.com/api/auth/register-phone", {
+      new Request("https://example.com/api/auth/register-email", {
         method: "POST",
-        body: JSON.stringify({ phone, code: codePayload.data.devCode })
+        body: JSON.stringify({ email, password: "NormalUser123" })
       }),
       testEnv
     );
@@ -737,17 +778,37 @@ describe("admin authentication bootstrap", () => {
       new Request("https://example.com/api/admin/users", {
         method: "POST",
         headers: { cookie },
-        body: JSON.stringify({ phone: "bad-phone" })
+        body: JSON.stringify({ email: "bad-email", phone: "bad-phone" })
       }),
       testEnv
     );
     expect(invalidCreate.status).toBe(400);
 
+    const invalidPhone = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({ email: "valid@example.com", phone: "bad-phone" })
+      }),
+      testEnv
+    );
+    expect(invalidPhone.status).toBe(400);
+
+    const blankPhone = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({ email: "blank-phone@example.com", phone: "" })
+      }),
+      testEnv
+    );
+    expect(blankPhone.status).toBe(200);
+
     const editAdmin = await handleRequest(
       new Request("https://example.com/api/admin/users/admin", {
         method: "PATCH",
         headers: { cookie },
-        body: JSON.stringify({ phone: "13700137002", username: "root" })
+        body: JSON.stringify({ email: "root@example.com", phone: "13700137002", username: "root" })
       }),
       testEnv
     );
@@ -775,7 +836,7 @@ describe("admin authentication bootstrap", () => {
       new Request("https://example.com/api/admin/users", {
         method: "POST",
         headers: { cookie },
-        body: JSON.stringify({ phone: "13400134000", status: "disabled" })
+        body: JSON.stringify({ email: "disabled@example.com", phone: "13400134000", status: "disabled" })
       }),
       testEnv
     );
@@ -783,7 +844,7 @@ describe("admin authentication bootstrap", () => {
     const disabledLogin = await handleRequest(
       new Request("https://example.com/api/auth/login-password", {
         method: "POST",
-        body: JSON.stringify({ account: "13400134000", password: createPayload.data.defaultPassword })
+        body: JSON.stringify({ account: "disabled@example.com", password: createPayload.data.defaultPassword })
       }),
       testEnv
     );
@@ -851,31 +912,120 @@ describe("admin authentication bootstrap", () => {
     }
   });
 
+  it("keeps legacy phone registration backend compatible but rejects bad codes", async () => {
+    const database = new FakeD1Database();
+    const testEnv = env(database);
+    const phone = "13300133006";
+
+    const codeResponse = await handleRequest(
+      new Request("https://example.com/api/auth/request-phone-code", {
+        method: "POST",
+        body: JSON.stringify({ phone, purpose: "register" })
+      }),
+      testEnv
+    );
+    const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
+
+    const badCode = await handleRequest(
+      new Request("https://example.com/api/auth/register-phone", {
+        method: "POST",
+        body: JSON.stringify({ phone, code: "000000" })
+      }),
+      testEnv
+    );
+    expect(badCode.status).toBe(401);
+
+    const registered = await handleRequest(
+      new Request("https://example.com/api/auth/register-phone", {
+        method: "POST",
+        body: JSON.stringify({ phone, code: codePayload.data.devCode })
+      }),
+      testEnv
+    );
+    expect(registered.status).toBe(200);
+    expect(database.phoneCodes[0].consumed_at).toBe("now");
+  });
+
+  it("does not store phone codes when webhook delivery fails", async () => {
+    const database = new FakeD1Database();
+    vi.stubGlobal("fetch", async () => new Response("nope", { status: 500 }));
+
+    try {
+      const response = await handleRequest(
+        new Request("https://example.com/api/auth/request-phone-code", {
+          method: "POST",
+          body: JSON.stringify({ phone: "13300133003", purpose: "register" })
+        }),
+        env(database, {
+          DEV_SMS_CODES: undefined,
+          SMS_PROVIDER: "webhook",
+          SMS_WEBHOOK_URL: "https://sms.example/send"
+        })
+      );
+
+      expect(response.status).toBe(502);
+      expect(database.phoneCodes).toHaveLength(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("does not store phone codes when webhook configuration is incomplete or unreachable", async () => {
+    const database = new FakeD1Database();
+
+    const missingUrl = await handleRequest(
+      new Request("https://example.com/api/auth/request-phone-code", {
+        method: "POST",
+        body: JSON.stringify({ phone: "13300133004", purpose: "register" })
+      }),
+      env(database, {
+        DEV_SMS_CODES: undefined,
+        SMS_PROVIDER: "webhook",
+        SMS_WEBHOOK_URL: undefined
+      })
+    );
+    expect(missingUrl.status).toBe(501);
+
+    vi.stubGlobal("fetch", async () => {
+      throw new Error("network failed");
+    });
+    try {
+      const unreachable = await handleRequest(
+        new Request("https://example.com/api/auth/request-phone-code", {
+          method: "POST",
+          body: JSON.stringify({ phone: "13300133005", purpose: "register" })
+        }),
+        env(database, {
+          DEV_SMS_CODES: undefined,
+          SMS_PROVIDER: "webhook",
+          SMS_WEBHOOK_URL: "https://sms.example/send"
+        })
+      );
+
+      expect(unreachable.status).toBe(502);
+      expect(database.phoneCodes).toHaveLength(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("isolates dashboard and record APIs by authenticated user", async () => {
     const database = new FakeD1Database();
     const envOne = env(database);
 
-    async function register(phone: string): Promise<string> {
-      const codeResponse = await handleRequest(
-        new Request("https://example.com/api/auth/request-phone-code", {
-          method: "POST",
-          body: JSON.stringify({ phone, purpose: "register" })
-        }),
-        envOne
-      );
-      const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
+    async function register(email: string): Promise<string> {
       const registerResponse = await handleRequest(
-        new Request("https://example.com/api/auth/register-phone", {
+        new Request("https://example.com/api/auth/register-email", {
           method: "POST",
-          body: JSON.stringify({ phone, code: codePayload.data.devCode })
+          body: JSON.stringify({ email, password: "UserPassword123" })
         }),
         envOne
       );
       return registerResponse.headers.get("set-cookie")?.split(";")[0] ?? "";
     }
 
-    const userOneCookie = await register("13200132001");
-    const userTwoCookie = await register("13200132002");
+    const userOneCookie = await register("one@example.com");
+    const userTwoCookie = await register("two@example.com");
 
     const oneRecord = await handleRequest(
       new Request("https://example.com/api/records", {
@@ -925,19 +1075,11 @@ describe("admin authentication bootstrap", () => {
   it("validates and mutates only the current user's records", async () => {
     const database = new FakeD1Database();
     const testEnv = env(database);
-    const phone = "13100131000";
-    const codeResponse = await handleRequest(
-      new Request("https://example.com/api/auth/request-phone-code", {
-        method: "POST",
-        body: JSON.stringify({ phone, purpose: "register" })
-      }),
-      testEnv
-    );
-    const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
+    const email = "records@example.com";
     const register = await handleRequest(
-      new Request("https://example.com/api/auth/register-phone", {
+      new Request("https://example.com/api/auth/register-email", {
         method: "POST",
-        body: JSON.stringify({ phone, code: codePayload.data.devCode })
+        body: JSON.stringify({ email, password: "RecordsPassword123" })
       }),
       testEnv
     );

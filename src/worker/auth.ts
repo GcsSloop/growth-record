@@ -9,8 +9,9 @@ const PASSWORD_ITERATIONS = 100_000;
 
 interface AdminUser {
   id: string;
-  username: string;
-  phone?: string;
+  username: string | null;
+  email?: string | null;
+  phone?: string | null;
   password_hash: string | null;
   password_salt: string | null;
   role: "admin" | "user";
@@ -22,7 +23,8 @@ interface AdminUser {
 interface SessionUser {
   id: string;
   username: string | null;
-  phone?: string;
+  email?: string | null;
+  phone?: string | null;
   role: "admin" | "user";
   status: "active" | "disabled";
   must_change_password?: number | boolean;
@@ -91,9 +93,9 @@ export async function handlePasswordLogin(request: Request, env: Env): Promise<R
   }
 
   const user = await env.DB.prepare(
-    "SELECT id, phone, username, password_hash, password_salt, role, status, must_change_password FROM users WHERE username = ? OR phone = ?"
+    "SELECT id, email, phone, username, password_hash, password_salt, role, status, must_change_password FROM users WHERE username = ? OR email = ? OR phone = ?"
   )
-    .bind(account, account)
+    .bind(account, account, account)
     .first<AdminUser>();
 
   if (!user || !user.password_hash || !user.password_salt || user.status !== "active") {
@@ -111,10 +113,47 @@ export async function handlePasswordLogin(request: Request, env: Env): Promise<R
     {
       user: {
         id: user.id,
+        email: user.email,
         username: user.username,
         role: user.role
       },
       requiresPasswordChange: Boolean(user.must_change_password)
+    },
+    {
+      headers: {
+        "set-cookie": buildSessionCookie(token)
+      }
+    }
+  );
+}
+
+export async function handleEmailRegistration(request: Request, env: Env): Promise<Response> {
+  const { email, password } = await readJsonBody<{ email?: string; password?: string }>(request);
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return apiError("invalid_email", "A valid email address is required.", 400);
+  const validation = validatePassword(password);
+  if (validation) return validation;
+
+  const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(normalizedEmail).first<AdminUser>();
+  if (existing) return apiError("email_already_registered", "This email address is already registered.", 409);
+
+  const userId = crypto.randomUUID();
+  const salt = randomToken();
+  const passwordHash = await hashPassword(password as string, salt);
+  await env.DB.prepare(
+    "INSERT INTO users (id, email, phone, username, password_hash, password_salt, role, status, display_name, must_change_password, created_at, updated_at) VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))"
+  )
+    .bind(userId, normalizedEmail, passwordHash, salt, "user", "active", normalizedEmail)
+    .run();
+
+  const { token } = await createSession(env, userId);
+  return json(
+    {
+      user: {
+        id: userId,
+        email: normalizedEmail,
+        role: "user"
+      }
     },
     {
       headers: {
@@ -237,7 +276,7 @@ export async function handleAdminListUsers(request: Request, env: Env): Promise<
   if (admin instanceof Response) return admin;
 
   const result = await env.DB.prepare(
-    "SELECT id, phone, username, role, status, display_name, must_change_password, created_at, updated_at, last_login_at FROM users ORDER BY created_at DESC"
+    "SELECT id, email, phone, username, role, status, display_name, must_change_password, created_at, updated_at, last_login_at FROM users ORDER BY created_at DESC"
   ).all<AdminUser>();
 
   return json({ users: (result.results ?? []).map(publicUser) });
@@ -248,13 +287,17 @@ export async function handleAdminCreateUser(request: Request, env: Env): Promise
   if (admin instanceof Response) return admin;
 
   const body = await readJsonBody<{
+    email?: string;
     phone?: string;
     username?: string;
     displayName?: string;
     role?: "admin" | "user";
     status?: "active" | "disabled";
   }>(request);
-  if (!isValidPhone(body.phone)) return apiError("invalid_phone", "A valid phone number is required.", 400);
+  const email = normalizeEmail(body.email);
+  if (!email) return apiError("invalid_email", "A valid email address is required.", 400);
+  const phone = normalizeOptionalPhone(body.phone);
+  if (phone instanceof Response) return phone;
 
   const userId = crypto.randomUUID();
   const defaultPassword = generateDefaultPassword();
@@ -263,18 +306,19 @@ export async function handleAdminCreateUser(request: Request, env: Env): Promise
   const role = body.role === "admin" ? "admin" : "user";
   const status = body.status === "disabled" ? "disabled" : "active";
   const username = body.username?.trim() || null;
-  const displayName = body.displayName?.trim() || username || body.phone;
+  const displayName = body.displayName?.trim() || username || email;
 
   await env.DB.prepare(
-    "INSERT INTO users (id, phone, username, password_hash, password_salt, role, status, display_name, must_change_password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))"
+    "INSERT INTO users (id, email, phone, username, password_hash, password_salt, role, status, display_name, must_change_password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))"
   )
-    .bind(userId, body.phone, username, passwordHash, salt, role, status, displayName)
+    .bind(userId, email, phone, username, passwordHash, salt, role, status, displayName)
     .run();
 
   return json({
     user: {
       id: userId,
-      phone: body.phone,
+      email,
+      phone,
       username,
       role,
       status,
@@ -291,23 +335,27 @@ export async function handleAdminUpdateUser(request: Request, env: Env, userId: 
   if (userId === ADMIN_ID) return apiError("cannot_modify_admin", "The default admin cannot be edited here.", 400);
 
   const body = await readJsonBody<{
+    email?: string;
     phone?: string;
     username?: string;
     displayName?: string;
     role?: "admin" | "user";
     status?: "active" | "disabled";
   }>(request);
-  if (!isValidPhone(body.phone)) return apiError("invalid_phone", "A valid phone number is required.", 400);
+  const email = normalizeEmail(body.email);
+  if (!email) return apiError("invalid_email", "A valid email address is required.", 400);
+  const phone = normalizeOptionalPhone(body.phone);
+  if (phone instanceof Response) return phone;
 
   const role = body.role === "admin" ? "admin" : "user";
   const status = body.status === "disabled" ? "disabled" : "active";
   const username = body.username?.trim() || null;
-  const displayName = body.displayName?.trim() || username || body.phone;
+  const displayName = body.displayName?.trim() || username || email;
 
   await env.DB.prepare(
-    "UPDATE users SET phone = ?, username = ?, role = ?, status = ?, display_name = ?, updated_at = datetime('now') WHERE id = ?"
+    "UPDATE users SET email = ?, phone = ?, username = ?, role = ?, status = ?, display_name = ?, updated_at = datetime('now') WHERE id = ?"
   )
-    .bind(body.phone, username, role, status, displayName, userId)
+    .bind(email, phone, username, role, status, displayName, userId)
     .run();
 
   return json({ user: await findPublicUserById(env, userId) });
@@ -418,7 +466,7 @@ export async function handleDeleteRecord(request: Request, env: Env, recordId: s
 
 async function ensureAdminUser(env: Env): Promise<AdminUser> {
   const existing = await env.DB.prepare(
-    "SELECT id, username, password_hash, password_salt, role, status FROM users WHERE username = ?"
+    "SELECT id, email, phone, username, password_hash, password_salt, role, status FROM users WHERE username = ?"
   )
     .bind(ADMIN_USERNAME)
     .first<AdminUser>();
@@ -426,9 +474,9 @@ async function ensureAdminUser(env: Env): Promise<AdminUser> {
   if (existing) return existing;
 
   await env.DB.prepare(
-    "INSERT INTO users (id, phone, username, role, status, display_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))"
+    "INSERT INTO users (id, email, phone, username, role, status, display_name, created_at, updated_at) VALUES (?, NULL, NULL, ?, ?, ?, ?, datetime('now'), datetime('now'))"
   )
-    .bind(ADMIN_ID, ADMIN_USERNAME, ADMIN_USERNAME, "admin", "active", "系统管理员")
+    .bind(ADMIN_ID, ADMIN_USERNAME, "admin", "active", "系统管理员")
     .run();
 
   return {
@@ -462,7 +510,7 @@ async function requireAdmin(request: Request, env: Env): Promise<SessionUser | R
 
 async function findPublicUserById(env: Env, userId: string): Promise<ReturnType<typeof publicUser> | null> {
   const user = await env.DB.prepare(
-    "SELECT id, phone, username, role, status, display_name, must_change_password, created_at, updated_at, last_login_at FROM users WHERE id = ?"
+    "SELECT id, email, phone, username, role, status, display_name, must_change_password, created_at, updated_at, last_login_at FROM users WHERE id = ?"
   )
     .bind(userId)
     .first<AdminUser>();
@@ -472,6 +520,7 @@ async function findPublicUserById(env: Env, userId: string): Promise<ReturnType<
 function publicUser(user: AdminUser) {
   return {
     id: user.id,
+    email: user.email ?? "",
     phone: user.phone ?? "",
     username: user.username,
     role: user.role,
@@ -544,7 +593,7 @@ async function getSession(
 
   const tokenHash = await hashSessionToken(token, env);
   const user = await env.DB.prepare(
-    "SELECT u.id, u.username, u.phone, u.role, u.status FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > datetime('now')"
+    "SELECT u.id, u.username, u.email, u.phone, u.role, u.status FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > datetime('now')"
   )
     .bind(tokenHash)
     .first<SessionUser>();
@@ -566,6 +615,20 @@ function validatePassword(password: string | undefined): Response | null {
     return apiError("weak_password", "Password must be at least 8 characters.", 400);
   }
   return null;
+}
+
+function normalizeEmail(email: string | undefined): string | null {
+  if (typeof email !== "string") return null;
+  const value = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || value.length > 254) return null;
+  return value;
+}
+
+function normalizeOptionalPhone(phone: string | undefined): string | null | Response {
+  if (!phone || !phone.trim()) return null;
+  const value = phone.trim();
+  if (!isValidPhone(value)) return apiError("invalid_phone", "Phone number is invalid.", 400);
+  return value;
 }
 
 async function readJsonBody<T>(request: Request): Promise<T> {

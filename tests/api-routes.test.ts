@@ -3,13 +3,10 @@ import { API_ROUTES, findApiRoute } from "../src/worker/api-routes";
 
 describe("API route registry", () => {
   it("declares public authentication endpoints", () => {
-    expect(findApiRoute("POST", "/api/auth/register-phone")).toMatchObject({
+    expect(findApiRoute("POST", "/api/auth/register-email")).toMatchObject({
       access: "public"
     });
     expect(findApiRoute("POST", "/api/auth/login-password")).toMatchObject({
-      access: "public"
-    });
-    expect(findApiRoute("POST", "/api/auth/login-phone-code")).toMatchObject({
       access: "public"
     });
   });

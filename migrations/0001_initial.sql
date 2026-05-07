@@ -3,7 +3,8 @@
 
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
-  phone TEXT NOT NULL UNIQUE,
+  email TEXT UNIQUE,
+  phone TEXT UNIQUE,
   username TEXT UNIQUE,
   password_hash TEXT,
   password_salt TEXT,

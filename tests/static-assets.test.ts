@@ -16,10 +16,9 @@ describe("static web assets", () => {
     expect(html).toContain("园中月努力可视化系统");
     expect(script).toContain("/api/me");
     expect(script).toContain("/api/dashboard");
-    expect(script).toContain("/api/auth/request-phone-code");
-    expect(script).toContain("/api/auth/register-phone");
-    expect(script).toContain("sms_not_configured");
-    expect(script).toContain("短信服务未配置");
+    expect(script).toContain("/api/auth/register-email");
+    expect(script).not.toContain("/api/auth/request-phone-code");
+    expect(script).not.toContain("/api/auth/register-phone");
     expect(script).toContain("/api/me/password");
     expect(script).toContain("能力雷达");
     expect(script).toContain("碎碎念");
@@ -30,6 +29,9 @@ describe("static web assets", () => {
     expect(script).toContain("recordBody");
     expect(html).toContain("userManagementModal");
     expect(html).toContain("注册");
+    expect(html).toContain("邮箱");
+    expect(html).not.toContain("验证码");
+    expect(html).not.toContain("获取验证码");
     expect(html).toContain("设置密码");
     expect(html).not.toContain('href="/admin"');
     expect(html).not.toContain("今日打卡状态");
@@ -47,6 +49,8 @@ describe("static web assets", () => {
     expect(script).toContain("/api/me");
     expect(html).toContain("管理员登录");
     expect(html).toContain("openCreateUser");
+    expect(html).toContain("邮箱");
+    expect(script).toContain("form.elements.email");
     expect(html).toContain("userEditorModal");
     expect(html).toContain("defaultPasswordModal");
     expect(html).not.toContain("用户数量");

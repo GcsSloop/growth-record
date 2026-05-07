@@ -40,8 +40,8 @@ Every implementation cycle must be small and committed separately:
 
 - Never store plaintext passwords.
 - Prefer HttpOnly cookies for sessions.
-- Treat phone verification codes as short-lived secrets.
-- Do not log passwords, verification codes, session tokens, or API keys.
+- Treat email addresses and optional phone numbers as user data.
+- Do not log passwords, session tokens, or API keys.
 - Keep `.dev.vars` and `.env*` files out of Git.
 - The default admin username is `admin`; the password is configured on first `/admin` visit.
 - Admin password recovery must require backend configuration access through `ADMIN_RESET_KEY`.

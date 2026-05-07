@@ -12,6 +12,7 @@ import {
   handleCreateRecord,
   handleDashboard,
   handleDeleteRecord,
+  handleEmailRegistration,
   handleListRecords,
   handlePasswordLogin,
   handlePhoneRegistration,
@@ -68,6 +69,10 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
 
   if (url.pathname === "/api/auth/login-password" && request.method === "POST") {
     return handlePasswordLogin(request, env);
+  }
+
+  if (url.pathname === "/api/auth/register-email" && request.method === "POST") {
+    return handleEmailRegistration(request, env);
   }
 
   if (url.pathname === "/api/auth/request-phone-code" && request.method === "POST") {

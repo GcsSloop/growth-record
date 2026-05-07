@@ -57,6 +57,7 @@ async function loadUsers() {
       (user) => `
         <tr data-user-id="${user.id}">
           <td>${escapeHtml(user.displayName || user.username || "-")}</td>
+          <td>${escapeHtml(user.email || "-")}</td>
           <td>${escapeHtml(user.phone || "-")}</td>
           <td>${user.role === "admin" ? "管理员" : "普通用户"}</td>
           <td>${user.status === "active" ? "启用" : "禁用"}</td>
@@ -95,6 +96,7 @@ function openEditUser(user) {
   if (!user) return;
   const form = document.getElementById("userEditorForm");
   form.elements.id.value = user.id;
+  form.elements.email.value = user.email || "";
   form.elements.phone.value = user.phone || "";
   form.elements.username.value = user.username || "";
   form.elements.displayName.value = user.displayName || "";
@@ -110,6 +112,7 @@ async function saveUser(event) {
   const form = event.currentTarget;
   const id = form.elements.id.value;
   const body = {
+    email: form.elements.email.value.trim(),
     phone: form.elements.phone.value.trim(),
     username: form.elements.username.value.trim(),
     displayName: form.elements.displayName.value.trim(),

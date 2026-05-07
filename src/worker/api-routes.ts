@@ -9,6 +9,7 @@ export interface ApiRoute {
 
 export const API_ROUTES = [
   { name: "health", method: "GET", path: "/api/health", access: "public" },
+  { name: "register-email", method: "POST", path: "/api/auth/register-email", access: "public" },
   { name: "register-phone", method: "POST", path: "/api/auth/register-phone", access: "public" },
   { name: "request-phone-code", method: "POST", path: "/api/auth/request-phone-code", access: "public" },
   { name: "login-password", method: "POST", path: "/api/auth/login-password", access: "public" },

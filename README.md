@@ -97,19 +97,9 @@ The admin backend can create, list, edit, disable, delete, and reset regular use
 
 ## Registration And Sessions
 
-Users can register with a phone verification code. Successful registration creates an HttpOnly session cookie valid for 30 days. Authenticated `/api/me` checks refresh the session for another 30 days, so users who keep returning within that window stay signed in. If a user is inactive for more than 30 consecutive days, they must authenticate again.
+Users can register with email and password. Successful registration creates an HttpOnly session cookie valid for 30 days. Authenticated `/api/me` checks refresh the session for another 30 days, so users who keep returning within that window stay signed in. If a user is inactive for more than 30 consecutive days, they must authenticate again.
 
-Phone code delivery requires an SMS provider. Cloudflare does not provide a general application SMS OTP product for this use case. For local development only, set `DEV_SMS_CODES=true` to return the generated verification code in the API response. Do not enable this setting on a public deployment.
-
-Production SMS delivery is handled through a webhook adapter:
-
-```bash
-wrangler secret put SMS_API_KEY
-wrangler secret put SMS_WEBHOOK_URL
-wrangler secret put SMS_PROVIDER # use: webhook
-```
-
-The webhook receives `phone`, `purpose`, `code`, and `expiresInMinutes` as JSON. The Worker only stores a usable verification code after the provider configuration is valid and the delivery request succeeds.
+The user model keeps an optional phone field for admin-managed profile data, but the public web registration flow does not expose phone registration or phone verification.
 
 ## Desktop Clients
 

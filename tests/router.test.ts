@@ -32,6 +32,18 @@ describe("Worker router", () => {
     });
   });
 
+  it("returns 501 for planned API routes that are not implemented yet", async () => {
+    const response = await handleRequest(new Request("https://example.com/api/records"), env);
+
+    expect(response.status).toBe(501);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "not_implemented",
+        message: "Route 'list-records' is planned but not implemented yet."
+      }
+    });
+  });
+
   it("returns a clear response for non-API fallback routes", async () => {
     const response = await handleRequest(new Request("https://example.com/dashboard"), env);
 

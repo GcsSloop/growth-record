@@ -25,3 +25,7 @@ export function apiError(code: string, message: string, status = 400): Response 
 export function notFound(): Response {
   return apiError("not_found", "The requested resource was not found.", 404);
 }
+
+export function notImplemented(routeName: string): Response {
+  return apiError("not_implemented", `Route '${routeName}' is planned but not implemented yet.`, 501);
+}

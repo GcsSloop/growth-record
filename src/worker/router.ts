@@ -1,4 +1,5 @@
-import { apiError, json, notFound } from "./http";
+import { findApiRoute } from "./api-routes";
+import { apiError, json, notFound, notImplemented } from "./http";
 import type { Env } from "./types";
 
 export async function handleRequest(request: Request, env: Env): Promise<Response> {
@@ -13,6 +14,8 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   }
 
   if (url.pathname.startsWith("/api/")) {
+    const route = findApiRoute(request.method, url.pathname);
+    if (route) return notImplemented(route.name);
     return notFound();
   }
 

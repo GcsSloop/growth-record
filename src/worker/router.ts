@@ -1,8 +1,13 @@
 import { findApiRoute } from "./api-routes";
 import {
   handleAdminBootstrap,
+  handleAdminCreateUser,
+  handleAdminDeleteUser,
+  handleAdminListUsers,
   handleAdminResetPassword,
+  handleAdminResetUserPassword,
   handleAdminSetupPassword,
+  handleAdminUpdateUser,
   handleCurrentUser,
   handlePasswordLogin,
   handlePhoneRegistration,
@@ -33,6 +38,27 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
 
   if (url.pathname === "/api/admin/reset-password" && request.method === "POST") {
     return handleAdminResetPassword(request, env);
+  }
+
+  if (url.pathname === "/api/admin/users" && request.method === "GET") {
+    return handleAdminListUsers(request, env);
+  }
+
+  if (url.pathname === "/api/admin/users" && request.method === "POST") {
+    return handleAdminCreateUser(request, env);
+  }
+
+  const adminUserMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
+  if (adminUserMatch && request.method === "PATCH") {
+    return handleAdminUpdateUser(request, env, adminUserMatch[1]);
+  }
+  if (adminUserMatch && request.method === "DELETE") {
+    return handleAdminDeleteUser(request, env, adminUserMatch[1]);
+  }
+
+  const adminResetUserMatch = url.pathname.match(/^\/api\/admin\/users\/([^/]+)\/reset-password$/);
+  if (adminResetUserMatch && request.method === "POST") {
+    return handleAdminResetUserPassword(request, env, adminResetUserMatch[1]);
   }
 
   if (url.pathname === "/api/auth/login-password" && request.method === "POST") {

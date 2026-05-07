@@ -207,6 +207,27 @@ input {
   font: inherit;
 }
 
+select {
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: #111320;
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.password-output {
+  display: block;
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  color: var(--gold-bright);
+  font-size: 1.1rem;
+  overflow-wrap: anywhere;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;

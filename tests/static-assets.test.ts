@@ -34,7 +34,11 @@ describe("static web assets", () => {
 
     expect(html).toContain("管理后台");
     expect(script).toContain("/api/admin/bootstrap");
+    expect(script).toContain("/api/me");
     expect(html).toContain("管理员登录");
+    expect(html).toContain("openCreateUser");
+    expect(html).toContain("userEditorModal");
+    expect(html).toContain("defaultPasswordModal");
     expect(html).not.toContain("用户数量");
     expect(html).not.toContain("今日活跃");
     expect(script).toContain("/api/admin/metrics");

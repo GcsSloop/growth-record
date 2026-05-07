@@ -93,6 +93,8 @@ curl -X POST https://growth-record.gcssloop.workers.dev/api/admin/reset-password
 
 After reset, `/admin` returns to the first-visit password setup state. Do not expose `ADMIN_RESET_KEY` in frontend code, logs, or documentation.
 
+The admin backend can create, list, edit, disable, delete, and reset regular users. Admin-created users receive a generated default password and must change it on first login before normal use. Password resets follow the same rule and invalidate existing sessions for that user.
+
 ## Registration And Sessions
 
 Users can register with a phone verification code. Successful registration creates an HttpOnly session cookie valid for 30 days. Authenticated `/api/me` checks refresh the session for another 30 days, so users who keep returning within that window stay signed in. If a user is inactive for more than 30 consecutive days, they must authenticate again.

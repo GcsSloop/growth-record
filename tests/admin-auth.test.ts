@@ -20,6 +20,10 @@ class FakeStatement {
   run(): Promise<D1Result> {
     return this.db.run(this.sql, this.bindings);
   }
+
+  all<T = unknown>(): Promise<D1Result<T>> {
+    return this.db.all<T>(this.sql, this.bindings);
+  }
 }
 
 class FakeD1Database {
@@ -32,6 +36,9 @@ class FakeD1Database {
   }
 
   async first<T>(sql: string, bindings: unknown[]): Promise<T | null> {
+    if (sql.includes("SELECT id, phone, username, role, status, display_name, must_change_password")) {
+      return (this.users.get(String(bindings[0])) as T) ?? null;
+    }
     if (sql.includes("password_hash") && sql.includes("FROM users WHERE username = ?")) {
       return (this.findUserByAccount(String(bindings[0])) as T) ?? null;
     }
@@ -67,7 +74,32 @@ class FakeD1Database {
     throw new Error(`Unhandled first SQL: ${sql}`);
   }
 
+  async all<T>(sql: string, _bindings: unknown[] = []): Promise<D1Result<T>> {
+    if (sql.includes("SELECT id, phone, username, role, status, display_name, must_change_password")) {
+      return {
+        ...fakeResult(),
+        results: [...this.users.values()] as T[]
+      };
+    }
+    throw new Error(`Unhandled all SQL: ${sql}`);
+  }
+
   async run(sql: string, bindings: unknown[]): Promise<D1Result> {
+    if (sql.includes("INSERT INTO users") && sql.includes("must_change_password")) {
+      const [id, phone, username, passwordHash, passwordSalt, role, status, displayName] = bindings;
+      this.users.set(String(id), {
+        id,
+        phone,
+        username,
+        password_hash: passwordHash,
+        password_salt: passwordSalt,
+        role,
+        status,
+        display_name: displayName,
+        must_change_password: true
+      });
+      return fakeResult();
+    }
     if (sql.includes("INSERT INTO users")) {
       const isGeneratedUsername = !sql.includes("NULL");
       const [id, phone] = bindings;
@@ -83,7 +115,8 @@ class FakeD1Database {
         status,
         display_name: displayName,
         password_hash: null,
-        password_salt: null
+        password_salt: null,
+        must_change_password: false
       });
       return fakeResult();
     }
@@ -115,6 +148,12 @@ class FakeD1Database {
       }
       return fakeResult();
     }
+    if (sql.includes("UPDATE users SET password_hash = ?, password_salt = ?, must_change_password = 1")) {
+      const [passwordHash, passwordSalt, id] = bindings;
+      const user = this.users.get(String(id));
+      if (user) Object.assign(user, { password_hash: passwordHash, password_salt: passwordSalt, must_change_password: true });
+      return fakeResult();
+    }
     if (sql.includes("UPDATE users SET password_hash = ?")) {
       const [passwordHash, passwordSalt, lookup] = bindings;
       const user = sql.includes("WHERE id = ?")
@@ -123,7 +162,18 @@ class FakeD1Database {
       if (user) {
         user.password_hash = passwordHash;
         user.password_salt = passwordSalt;
+        user.must_change_password = false;
       }
+      return fakeResult();
+    }
+    if (sql.includes("UPDATE users SET phone = ?")) {
+      const [phone, username, role, status, displayName, id] = bindings;
+      const user = this.users.get(String(id));
+      if (user) Object.assign(user, { phone, username, role, status, display_name: displayName });
+      return fakeResult();
+    }
+    if (sql.includes("DELETE FROM users WHERE id = ?")) {
+      this.users.delete(String(bindings[0]));
       return fakeResult();
     }
     if (sql.includes("INSERT INTO sessions")) {
@@ -180,6 +230,25 @@ function env(db = new FakeD1Database(), overrides: Partial<Env> = {}): Env {
 
 async function json(response: Response): Promise<unknown> {
   return response.json();
+}
+
+async function loginAdmin(database: FakeD1Database): Promise<{ cookie: string; testEnv: Env }> {
+  const testEnv = env(database);
+  await handleRequest(
+    new Request("https://example.com/api/admin/setup-password", {
+      method: "POST",
+      body: JSON.stringify({ password: "StrongPassword123" })
+    }),
+    testEnv
+  );
+  const login = await handleRequest(
+    new Request("https://example.com/api/auth/login-password", {
+      method: "POST",
+      body: JSON.stringify({ account: "admin", password: "StrongPassword123" })
+    }),
+    testEnv
+  );
+  return { cookie: login.headers.get("set-cookie")?.split(";")[0] ?? "", testEnv };
 }
 
 describe("admin authentication bootstrap", () => {
@@ -437,5 +506,267 @@ describe("admin authentication bootstrap", () => {
 
     expect(reset.status).toBe(200);
     expect(database.users.get("admin")?.password_hash).toBeNull();
+  });
+
+  it("keeps admin authenticated across refresh through /api/me", async () => {
+    const database = new FakeD1Database();
+    const { cookie, testEnv } = await loginAdmin(database);
+
+    const me = await handleRequest(
+      new Request("https://example.com/api/me", {
+        headers: { cookie }
+      }),
+      testEnv
+    );
+
+    expect(me.status).toBe(200);
+    await expect(json(me)).resolves.toMatchObject({
+      data: {
+        user: {
+          username: "admin",
+          role: "admin"
+        }
+      }
+    });
+  });
+
+  it("lets admins create, list, update, reset, and delete users", async () => {
+    const database = new FakeD1Database();
+    const { cookie, testEnv } = await loginAdmin(database);
+
+    const create = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({
+          phone: "13700137000",
+          username: "alice",
+          displayName: "Alice",
+          role: "user",
+          status: "active"
+        })
+      }),
+      testEnv
+    );
+    expect(create.status).toBe(200);
+    const createPayload = (await json(create)) as { data: { user: { id: string }; defaultPassword: string } };
+    expect(createPayload.data.defaultPassword).toEqual(expect.any(String));
+
+    const list = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        headers: { cookie }
+      }),
+      testEnv
+    );
+    expect(list.status).toBe(200);
+    await expect(json(list)).resolves.toMatchObject({
+      data: {
+        users: expect.arrayContaining([
+          expect.objectContaining({
+            username: "alice",
+            mustChangePassword: true
+          })
+        ])
+      }
+    });
+
+    const update = await handleRequest(
+      new Request(`https://example.com/api/admin/users/${createPayload.data.user.id}`, {
+        method: "PATCH",
+        headers: { cookie },
+        body: JSON.stringify({
+          phone: "13700137001",
+          username: "alice-updated",
+          displayName: "Alice Updated",
+          role: "user",
+          status: "disabled"
+        })
+      }),
+      testEnv
+    );
+    expect(update.status).toBe(200);
+    expect(database.users.get(createPayload.data.user.id)).toMatchObject({
+      phone: "13700137001",
+      username: "alice-updated",
+      status: "disabled"
+    });
+
+    const reset = await handleRequest(
+      new Request(`https://example.com/api/admin/users/${createPayload.data.user.id}/reset-password`, {
+        method: "POST",
+        headers: { cookie }
+      }),
+      testEnv
+    );
+    expect(reset.status).toBe(200);
+    expect(database.users.get(createPayload.data.user.id)?.must_change_password).toBe(true);
+
+    const remove = await handleRequest(
+      new Request(`https://example.com/api/admin/users/${createPayload.data.user.id}`, {
+        method: "DELETE",
+        headers: { cookie }
+      }),
+      testEnv
+    );
+    expect(remove.status).toBe(200);
+    expect(database.users.has(createPayload.data.user.id)).toBe(false);
+  });
+
+  it("requires admin-created users to change default password before normal use", async () => {
+    const database = new FakeD1Database();
+    const { cookie, testEnv } = await loginAdmin(database);
+    const create = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({ phone: "13600136000", username: "bob" })
+      }),
+      testEnv
+    );
+    const createPayload = (await json(create)) as { data: { defaultPassword: string } };
+
+    const login = await handleRequest(
+      new Request("https://example.com/api/auth/login-password", {
+        method: "POST",
+        body: JSON.stringify({ account: "13600136000", password: createPayload.data.defaultPassword })
+      }),
+      testEnv
+    );
+    expect(login.status).toBe(200);
+    await expect(json(login)).resolves.toMatchObject({
+      data: {
+        requiresPasswordChange: true
+      }
+    });
+
+    const userCookie = login.headers.get("set-cookie")?.split(";")[0] ?? "";
+    const password = await handleRequest(
+      new Request("https://example.com/api/me/password", {
+        method: "POST",
+        headers: { cookie: userCookie },
+        body: JSON.stringify({ password: "BobPassword123" })
+      }),
+      testEnv
+    );
+    expect(password.status).toBe(200);
+
+    const normalLogin = await handleRequest(
+      new Request("https://example.com/api/auth/login-password", {
+        method: "POST",
+        body: JSON.stringify({ account: "13600136000", password: "BobPassword123" })
+      }),
+      testEnv
+    );
+    expect(normalLogin.status).toBe(200);
+    await expect(json(normalLogin)).resolves.toMatchObject({
+      data: {
+        requiresPasswordChange: false
+      }
+    });
+  });
+
+  it("rejects protected admin operations from guests and normal users", async () => {
+    const database = new FakeD1Database();
+    const guestList = await handleRequest(new Request("https://example.com/api/admin/users"), env(database));
+    expect(guestList.status).toBe(401);
+
+    const phone = "13500135000";
+    const testEnv = env(database);
+    const codeResponse = await handleRequest(
+      new Request("https://example.com/api/auth/request-phone-code", {
+        method: "POST",
+        body: JSON.stringify({ phone, purpose: "register" })
+      }),
+      testEnv
+    );
+    const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
+    const register = await handleRequest(
+      new Request("https://example.com/api/auth/register-phone", {
+        method: "POST",
+        body: JSON.stringify({ phone, code: codePayload.data.devCode })
+      }),
+      testEnv
+    );
+    const userCookie = register.headers.get("set-cookie")?.split(";")[0] ?? "";
+    const forbidden = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        headers: { cookie: userCookie }
+      }),
+      testEnv
+    );
+    expect(forbidden.status).toBe(403);
+  });
+
+  it("rejects unsafe admin user mutations and disabled user login", async () => {
+    const database = new FakeD1Database();
+    const { cookie, testEnv } = await loginAdmin(database);
+
+    const invalidCreate = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({ phone: "bad-phone" })
+      }),
+      testEnv
+    );
+    expect(invalidCreate.status).toBe(400);
+
+    const editAdmin = await handleRequest(
+      new Request("https://example.com/api/admin/users/admin", {
+        method: "PATCH",
+        headers: { cookie },
+        body: JSON.stringify({ phone: "13700137002", username: "root" })
+      }),
+      testEnv
+    );
+    expect(editAdmin.status).toBe(400);
+
+    const deleteAdmin = await handleRequest(
+      new Request("https://example.com/api/admin/users/admin", {
+        method: "DELETE",
+        headers: { cookie }
+      }),
+      testEnv
+    );
+    expect(deleteAdmin.status).toBe(400);
+
+    const resetAdmin = await handleRequest(
+      new Request("https://example.com/api/admin/users/admin/reset-password", {
+        method: "POST",
+        headers: { cookie }
+      }),
+      testEnv
+    );
+    expect(resetAdmin.status).toBe(400);
+
+    const create = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({ phone: "13400134000", status: "disabled" })
+      }),
+      testEnv
+    );
+    const createPayload = (await json(create)) as { data: { defaultPassword: string } };
+    const disabledLogin = await handleRequest(
+      new Request("https://example.com/api/auth/login-password", {
+        method: "POST",
+        body: JSON.stringify({ account: "13400134000", password: createPayload.data.defaultPassword })
+      }),
+      testEnv
+    );
+    expect(disabledLogin.status).toBe(401);
+  });
+
+  it("does not expose phone codes when SMS is not configured", async () => {
+    const response = await handleRequest(
+      new Request("https://example.com/api/auth/request-phone-code", {
+        method: "POST",
+        body: JSON.stringify({ phone: "13300133000", purpose: "register" })
+      }),
+      env(new FakeD1Database(), { DEV_SMS_CODES: undefined, SMS_PROVIDER: undefined })
+    );
+
+    expect(response.status).toBe(501);
   });
 });

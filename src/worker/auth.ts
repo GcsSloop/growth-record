@@ -10,10 +10,13 @@ const PASSWORD_ITERATIONS = 100_000;
 interface AdminUser {
   id: string;
   username: string;
+  phone?: string;
   password_hash: string | null;
   password_salt: string | null;
   role: "admin" | "user";
   status: "active" | "disabled";
+  display_name?: string | null;
+  must_change_password?: number | boolean;
 }
 
 interface SessionUser {
@@ -22,6 +25,7 @@ interface SessionUser {
   phone?: string;
   role: "admin" | "user";
   status: "active" | "disabled";
+  must_change_password?: number | boolean;
 }
 
 interface PhoneCode {
@@ -76,7 +80,7 @@ export async function handlePasswordLogin(request: Request, env: Env): Promise<R
   }
 
   const user = await env.DB.prepare(
-    "SELECT id, username, password_hash, password_salt, role, status FROM users WHERE username = ? OR phone = ?"
+    "SELECT id, phone, username, password_hash, password_salt, role, status, must_change_password FROM users WHERE username = ? OR phone = ?"
   )
     .bind(account, account)
     .first<AdminUser>();
@@ -98,7 +102,8 @@ export async function handlePasswordLogin(request: Request, env: Env): Promise<R
         id: user.id,
         username: user.username,
         role: user.role
-      }
+      },
+      requiresPasswordChange: Boolean(user.must_change_password)
     },
     {
       headers: {
@@ -202,7 +207,7 @@ export async function handleSetCurrentUserPassword(request: Request, env: Env): 
   const salt = randomToken();
   const passwordHash = await hashPassword(password as string, salt);
   await env.DB.prepare(
-    "UPDATE users SET password_hash = ?, password_salt = ?, updated_at = datetime('now') WHERE id = ?"
+    "UPDATE users SET password_hash = ?, password_salt = ?, must_change_password = 0, updated_at = datetime('now') WHERE id = ?"
   )
     .bind(passwordHash, salt, session.user.id)
     .run();
@@ -216,6 +221,114 @@ export async function handleSetCurrentUserPassword(request: Request, env: Env): 
       }
     }
   );
+}
+
+export async function handleAdminListUsers(request: Request, env: Env): Promise<Response> {
+  const admin = await requireAdmin(request, env);
+  if (admin instanceof Response) return admin;
+
+  const result = await env.DB.prepare(
+    "SELECT id, phone, username, role, status, display_name, must_change_password, created_at, updated_at, last_login_at FROM users ORDER BY created_at DESC"
+  ).all<AdminUser>();
+
+  return json({ users: (result.results ?? []).map(publicUser) });
+}
+
+export async function handleAdminCreateUser(request: Request, env: Env): Promise<Response> {
+  const admin = await requireAdmin(request, env);
+  if (admin instanceof Response) return admin;
+
+  const body = await readJsonBody<{
+    phone?: string;
+    username?: string;
+    displayName?: string;
+    role?: "admin" | "user";
+    status?: "active" | "disabled";
+  }>(request);
+  if (!isValidPhone(body.phone)) return apiError("invalid_phone", "A valid phone number is required.", 400);
+
+  const userId = crypto.randomUUID();
+  const defaultPassword = generateDefaultPassword();
+  const salt = randomToken();
+  const passwordHash = await hashPassword(defaultPassword, salt);
+  const role = body.role === "admin" ? "admin" : "user";
+  const status = body.status === "disabled" ? "disabled" : "active";
+  const username = body.username?.trim() || null;
+  const displayName = body.displayName?.trim() || username || body.phone;
+
+  await env.DB.prepare(
+    "INSERT INTO users (id, phone, username, password_hash, password_salt, role, status, display_name, must_change_password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))"
+  )
+    .bind(userId, body.phone, username, passwordHash, salt, role, status, displayName)
+    .run();
+
+  return json({
+    user: {
+      id: userId,
+      phone: body.phone,
+      username,
+      role,
+      status,
+      displayName,
+      mustChangePassword: true
+    },
+    defaultPassword
+  });
+}
+
+export async function handleAdminUpdateUser(request: Request, env: Env, userId: string): Promise<Response> {
+  const admin = await requireAdmin(request, env);
+  if (admin instanceof Response) return admin;
+  if (userId === ADMIN_ID) return apiError("cannot_modify_admin", "The default admin cannot be edited here.", 400);
+
+  const body = await readJsonBody<{
+    phone?: string;
+    username?: string;
+    displayName?: string;
+    role?: "admin" | "user";
+    status?: "active" | "disabled";
+  }>(request);
+  if (!isValidPhone(body.phone)) return apiError("invalid_phone", "A valid phone number is required.", 400);
+
+  const role = body.role === "admin" ? "admin" : "user";
+  const status = body.status === "disabled" ? "disabled" : "active";
+  const username = body.username?.trim() || null;
+  const displayName = body.displayName?.trim() || username || body.phone;
+
+  await env.DB.prepare(
+    "UPDATE users SET phone = ?, username = ?, role = ?, status = ?, display_name = ?, updated_at = datetime('now') WHERE id = ?"
+  )
+    .bind(body.phone, username, role, status, displayName, userId)
+    .run();
+
+  return json({ user: await findPublicUserById(env, userId) });
+}
+
+export async function handleAdminResetUserPassword(request: Request, env: Env, userId: string): Promise<Response> {
+  const admin = await requireAdmin(request, env);
+  if (admin instanceof Response) return admin;
+  if (userId === ADMIN_ID) return apiError("cannot_reset_admin", "Use admin reset key for the default admin.", 400);
+
+  const defaultPassword = generateDefaultPassword();
+  const salt = randomToken();
+  const passwordHash = await hashPassword(defaultPassword, salt);
+  await env.DB.prepare(
+    "UPDATE users SET password_hash = ?, password_salt = ?, must_change_password = 1, updated_at = datetime('now') WHERE id = ?"
+  )
+    .bind(passwordHash, salt, userId)
+    .run();
+  await env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId).run();
+
+  return json({ user: await findPublicUserById(env, userId), defaultPassword });
+}
+
+export async function handleAdminDeleteUser(request: Request, env: Env, userId: string): Promise<Response> {
+  const admin = await requireAdmin(request, env);
+  if (admin instanceof Response) return admin;
+  if (userId === ADMIN_ID) return apiError("cannot_delete_admin", "The default admin cannot be deleted.", 400);
+
+  await env.DB.prepare("DELETE FROM users WHERE id = ?").bind(userId).run();
+  return json({ deleted: true });
 }
 
 async function ensureAdminUser(env: Env): Promise<AdminUser> {
@@ -239,7 +352,8 @@ async function ensureAdminUser(env: Env): Promise<AdminUser> {
     password_hash: null,
     password_salt: null,
     role: "admin",
-    status: "active"
+    status: "active",
+    must_change_password: false
   };
 }
 
@@ -251,6 +365,35 @@ async function setAdminPassword(env: Env, password: string): Promise<void> {
   )
     .bind(passwordHash, salt, ADMIN_USERNAME)
     .run();
+}
+
+async function requireAdmin(request: Request, env: Env): Promise<SessionUser | Response> {
+  const session = await getSession(request, env);
+  if (!session) return apiError("unauthorized", "Authentication is required.", 401);
+  if (session.user.role !== "admin") return apiError("forbidden", "Admin access is required.", 403);
+  await refreshSession(env, session.tokenHash);
+  return session.user;
+}
+
+async function findPublicUserById(env: Env, userId: string): Promise<ReturnType<typeof publicUser> | null> {
+  const user = await env.DB.prepare(
+    "SELECT id, phone, username, role, status, display_name, must_change_password, created_at, updated_at, last_login_at FROM users WHERE id = ?"
+  )
+    .bind(userId)
+    .first<AdminUser>();
+  return user ? publicUser(user) : null;
+}
+
+function publicUser(user: AdminUser) {
+  return {
+    id: user.id,
+    phone: user.phone ?? "",
+    username: user.username,
+    role: user.role,
+    status: user.status,
+    displayName: user.display_name ?? "",
+    mustChangePassword: Boolean(user.must_change_password)
+  };
 }
 
 async function createSession(env: Env, userId: string): Promise<{ token: string; tokenHash: string }> {
@@ -359,6 +502,10 @@ async function consumePhoneCode(env: Env, phone: string, purpose: "register" | "
 function generateVerificationCode(): string {
   const value = crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000;
   return String(value).padStart(6, "0");
+}
+
+function generateDefaultPassword(): string {
+  return `GR-${randomToken().slice(0, 10)}`;
 }
 
 function isValidPhone(phone: string | undefined): phone is string {

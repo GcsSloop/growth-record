@@ -26,7 +26,10 @@ export const API_ROUTES = [
   { name: "get-settings", method: "GET", path: "/api/settings", access: "user" },
   { name: "update-settings", method: "PUT", path: "/api/settings", access: "user" },
   { name: "admin-list-users", method: "GET", path: "/api/admin/users", access: "admin" },
+  { name: "admin-create-user", method: "POST", path: "/api/admin/users", access: "admin" },
   { name: "admin-update-user", method: "PATCH", path: "/api/admin/users/:id", access: "admin" },
+  { name: "admin-delete-user", method: "DELETE", path: "/api/admin/users/:id", access: "admin" },
+  { name: "admin-reset-user-password", method: "POST", path: "/api/admin/users/:id/reset-password", access: "admin" },
   { name: "admin-user-records", method: "GET", path: "/api/admin/users/:id/records", access: "admin" },
   { name: "admin-metrics", method: "GET", path: "/api/admin/metrics", access: "admin" }
 ] as const satisfies readonly ApiRoute[];

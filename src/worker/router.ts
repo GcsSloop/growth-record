@@ -9,10 +9,15 @@ import {
   handleAdminSetupPassword,
   handleAdminUpdateUser,
   handleCurrentUser,
+  handleCreateRecord,
+  handleDashboard,
+  handleDeleteRecord,
+  handleListRecords,
   handlePasswordLogin,
   handlePhoneRegistration,
   handleRequestPhoneCode,
-  handleSetCurrentUserPassword
+  handleSetCurrentUserPassword,
+  handleUpdateRecord
 } from "./auth";
 import { apiError, json, notFound, notImplemented } from "./http";
 import type { Env } from "./types";
@@ -79,6 +84,26 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
 
   if (url.pathname === "/api/me/password" && request.method === "POST") {
     return handleSetCurrentUserPassword(request, env);
+  }
+
+  if (url.pathname === "/api/dashboard" && request.method === "GET") {
+    return handleDashboard(request, env);
+  }
+
+  if (url.pathname === "/api/records" && request.method === "GET") {
+    return handleListRecords(request, env);
+  }
+
+  if (url.pathname === "/api/records" && request.method === "POST") {
+    return handleCreateRecord(request, env);
+  }
+
+  const recordMatch = url.pathname.match(/^\/api\/records\/([^/]+)$/);
+  if (recordMatch && request.method === "PATCH") {
+    return handleUpdateRecord(request, env, recordMatch[1]);
+  }
+  if (recordMatch && request.method === "DELETE") {
+    return handleDeleteRecord(request, env, recordMatch[1]);
   }
 
   if (url.pathname.startsWith("/api/")) {

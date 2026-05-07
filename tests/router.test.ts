@@ -32,14 +32,14 @@ describe("Worker router", () => {
     });
   });
 
-  it("returns 501 for planned API routes that are not implemented yet", async () => {
+  it("requires authentication for implemented user data routes", async () => {
     const response = await handleRequest(new Request("https://example.com/api/records"), env);
 
-    expect(response.status).toBe(501);
+    expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({
       error: {
-        code: "not_implemented",
-        message: "Route 'list-records' is planned but not implemented yet."
+        code: "unauthorized",
+        message: "Authentication is required."
       }
     });
   });

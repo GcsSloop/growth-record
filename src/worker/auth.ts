@@ -32,6 +32,17 @@ interface PhoneCode {
   code_hash: string;
 }
 
+interface GrowthRecord {
+  id: string;
+  record_date: string;
+  dimension: string;
+  hours: number;
+  description: string;
+  exp: number;
+}
+
+const DEFAULT_DIMENSIONS = ["科研学习", "自媒体", "运动健身", "化妆技术", "电竞操作", "表达能力", "剪辑技能", "编程能力"];
+
 export async function handleAdminBootstrap(env: Env): Promise<Response> {
   const admin = await ensureAdminUser(env);
   return json({
@@ -331,6 +342,82 @@ export async function handleAdminDeleteUser(request: Request, env: Env, userId: 
   return json({ deleted: true });
 }
 
+export async function handleDashboard(request: Request, env: Env): Promise<Response> {
+  const session = await getSession(request, env);
+  if (!session) return apiError("unauthorized", "Authentication is required.", 401);
+  const records = await listUserRecords(env, session.user.id);
+  await refreshSession(env, session.tokenHash);
+
+  return json({
+    user: session.user,
+    title: "园中月努力可视化系统",
+    subtitle: "自由才是我永恒的向往",
+    dimensions: DEFAULT_DIMENSIONS,
+    records,
+    goals: ["建立稳定成长记录", "把打卡变成可复盘的数据"],
+    quotes: [{ id: "default", date: new Date().toISOString().slice(0, 10), text: "慢慢来，每天进步一点点。" }]
+  });
+}
+
+export async function handleListRecords(request: Request, env: Env): Promise<Response> {
+  const session = await getSession(request, env);
+  if (!session) return apiError("unauthorized", "Authentication is required.", 401);
+  const records = await listUserRecords(env, session.user.id);
+  await refreshSession(env, session.tokenHash);
+  return json({ records });
+}
+
+export async function handleCreateRecord(request: Request, env: Env): Promise<Response> {
+  const session = await getSession(request, env);
+  if (!session) return apiError("unauthorized", "Authentication is required.", 401);
+
+  const body = await readJsonBody<{ date?: string; dimension?: string; hours?: number; description?: string }>(request);
+  const normalized = normalizeRecordInput(body);
+  if (normalized instanceof Response) return normalized;
+
+  const id = crypto.randomUUID();
+  await env.DB.prepare(
+    "INSERT INTO growth_records (id, user_id, record_date, dimension, hours, description, exp, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))"
+  )
+    .bind(id, session.user.id, normalized.date, normalized.dimension, normalized.hours, normalized.description, normalized.exp)
+    .run();
+  await refreshSession(env, session.tokenHash);
+
+  return json({
+    record: {
+      id,
+      ...normalized
+    }
+  });
+}
+
+export async function handleUpdateRecord(request: Request, env: Env, recordId: string): Promise<Response> {
+  const session = await getSession(request, env);
+  if (!session) return apiError("unauthorized", "Authentication is required.", 401);
+
+  const body = await readJsonBody<{ date?: string; dimension?: string; hours?: number; description?: string }>(request);
+  const normalized = normalizeRecordInput(body);
+  if (normalized instanceof Response) return normalized;
+
+  await env.DB.prepare(
+    "UPDATE growth_records SET record_date = ?, dimension = ?, hours = ?, description = ?, exp = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
+  )
+    .bind(normalized.date, normalized.dimension, normalized.hours, normalized.description, normalized.exp, recordId, session.user.id)
+    .run();
+  await refreshSession(env, session.tokenHash);
+
+  return json({ record: { id: recordId, ...normalized } });
+}
+
+export async function handleDeleteRecord(request: Request, env: Env, recordId: string): Promise<Response> {
+  const session = await getSession(request, env);
+  if (!session) return apiError("unauthorized", "Authentication is required.", 401);
+
+  await env.DB.prepare("DELETE FROM growth_records WHERE id = ? AND user_id = ?").bind(recordId, session.user.id).run();
+  await refreshSession(env, session.tokenHash);
+  return json({ deleted: true });
+}
+
 async function ensureAdminUser(env: Env): Promise<AdminUser> {
   const existing = await env.DB.prepare(
     "SELECT id, username, password_hash, password_salt, role, status FROM users WHERE username = ?"
@@ -394,6 +481,49 @@ function publicUser(user: AdminUser) {
     displayName: user.display_name ?? "",
     mustChangePassword: Boolean(user.must_change_password)
   };
+}
+
+async function listUserRecords(env: Env, userId: string): Promise<Array<ReturnType<typeof publicRecord>>> {
+  const result = await env.DB.prepare(
+    "SELECT id, record_date, dimension, hours, description, exp FROM growth_records WHERE user_id = ? ORDER BY record_date DESC, created_at DESC"
+  )
+    .bind(userId)
+    .all<GrowthRecord>();
+  return (result.results ?? []).map(publicRecord);
+}
+
+function publicRecord(record: GrowthRecord) {
+  return {
+    id: record.id,
+    date: record.record_date,
+    dimension: record.dimension,
+    hours: Number(record.hours),
+    description: record.description,
+    exp: Number(record.exp)
+  };
+}
+
+function normalizeRecordInput(body: {
+  date?: string;
+  dimension?: string;
+  hours?: number;
+  description?: string;
+}): Response | { date: string; dimension: string; hours: number; description: string; exp: number } {
+  const date = body.date?.trim();
+  const dimension = body.dimension?.trim();
+  const hours = Number(body.hours);
+  const description = body.description?.trim() || "未描述";
+  if (!date || !dimension || !Number.isFinite(hours) || hours <= 0 || hours > 12) {
+    return apiError("invalid_record", "Date, dimension, and valid hours are required.", 400);
+  }
+  return { date, dimension, hours, description, exp: calcCheckinExp(hours) };
+}
+
+function calcCheckinExp(hours: number): number {
+  let exp = Math.round(hours * 10);
+  if (hours >= 4) exp = Math.round(exp * 1.2);
+  else if (hours >= 2.5) exp = Math.round(exp * 1.1);
+  return exp;
 }
 
 async function createSession(env: Env, userId: string): Promise<{ token: string; tokenHash: string }> {

@@ -30,6 +30,7 @@ class FakeD1Database {
   users = new Map<string, Record<string, unknown>>();
   sessions: Array<Record<string, unknown>> = [];
   phoneCodes: Array<Record<string, unknown>> = [];
+  records: Array<Record<string, unknown>> = [];
 
   prepare(sql: string): FakeStatement {
     return new FakeStatement(this, sql);
@@ -79,6 +80,13 @@ class FakeD1Database {
       return {
         ...fakeResult(),
         results: [...this.users.values()] as T[]
+      };
+    }
+    if (sql.includes("FROM growth_records WHERE user_id = ?")) {
+      const [userId] = _bindings;
+      return {
+        ...fakeResult(),
+        results: this.records.filter((record) => record.user_id === userId) as T[]
       };
     }
     throw new Error(`Unhandled all SQL: ${sql}`);
@@ -184,6 +192,30 @@ class FakeD1Database {
     if (sql.includes("DELETE FROM sessions WHERE user_id")) {
       const [userId] = bindings;
       this.sessions = this.sessions.filter((entry) => entry.user_id !== userId);
+      return fakeResult();
+    }
+    if (sql.includes("INSERT INTO growth_records")) {
+      const [id, userId, recordDate, dimension, hours, description, exp] = bindings;
+      this.records.push({
+        id,
+        user_id: userId,
+        record_date: recordDate,
+        dimension,
+        hours,
+        description,
+        exp
+      });
+      return fakeResult();
+    }
+    if (sql.includes("UPDATE growth_records SET")) {
+      const [recordDate, dimension, hours, description, exp, id, userId] = bindings;
+      const record = this.records.find((entry) => entry.id === id && entry.user_id === userId);
+      if (record) Object.assign(record, { record_date: recordDate, dimension, hours, description, exp });
+      return fakeResult();
+    }
+    if (sql.includes("DELETE FROM growth_records WHERE id = ? AND user_id = ?")) {
+      const [id, userId] = bindings;
+      this.records = this.records.filter((entry) => !(entry.id === id && entry.user_id === userId));
       return fakeResult();
     }
     throw new Error(`Unhandled run SQL: ${sql}`);
@@ -768,5 +800,139 @@ describe("admin authentication bootstrap", () => {
     );
 
     expect(response.status).toBe(501);
+  });
+
+  it("isolates dashboard and record APIs by authenticated user", async () => {
+    const database = new FakeD1Database();
+    const envOne = env(database);
+
+    async function register(phone: string): Promise<string> {
+      const codeResponse = await handleRequest(
+        new Request("https://example.com/api/auth/request-phone-code", {
+          method: "POST",
+          body: JSON.stringify({ phone, purpose: "register" })
+        }),
+        envOne
+      );
+      const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
+      const registerResponse = await handleRequest(
+        new Request("https://example.com/api/auth/register-phone", {
+          method: "POST",
+          body: JSON.stringify({ phone, code: codePayload.data.devCode })
+        }),
+        envOne
+      );
+      return registerResponse.headers.get("set-cookie")?.split(";")[0] ?? "";
+    }
+
+    const userOneCookie = await register("13200132001");
+    const userTwoCookie = await register("13200132002");
+
+    const oneRecord = await handleRequest(
+      new Request("https://example.com/api/records", {
+        method: "POST",
+        headers: { cookie: userOneCookie },
+        body: JSON.stringify({ date: "2026-05-07", dimension: "科研学习", hours: 2, description: "论文阅读" })
+      }),
+      envOne
+    );
+    expect(oneRecord.status).toBe(200);
+
+    const twoRecord = await handleRequest(
+      new Request("https://example.com/api/records", {
+        method: "POST",
+        headers: { cookie: userTwoCookie },
+        body: JSON.stringify({ date: "2026-05-07", dimension: "编程能力", hours: 1, description: "功能开发" })
+      }),
+      envOne
+    );
+    expect(twoRecord.status).toBe(200);
+
+    const userOneRecords = await handleRequest(
+      new Request("https://example.com/api/records", { headers: { cookie: userOneCookie } }),
+      envOne
+    );
+    await expect(json(userOneRecords)).resolves.toMatchObject({
+      data: {
+        records: [
+          expect.objectContaining({
+            dimension: "科研学习",
+            description: "论文阅读"
+          })
+        ]
+      }
+    });
+
+    const userOneDashboard = await handleRequest(
+      new Request("https://example.com/api/dashboard", { headers: { cookie: userOneCookie } }),
+      envOne
+    );
+    expect(userOneDashboard.status).toBe(200);
+    const dashboardPayload = (await json(userOneDashboard)) as { data: { records: Array<{ dimension: string }> } };
+    expect(dashboardPayload.data.records).toHaveLength(1);
+    expect(dashboardPayload.data.records[0].dimension).toBe("科研学习");
+  });
+
+  it("validates and mutates only the current user's records", async () => {
+    const database = new FakeD1Database();
+    const testEnv = env(database);
+    const phone = "13100131000";
+    const codeResponse = await handleRequest(
+      new Request("https://example.com/api/auth/request-phone-code", {
+        method: "POST",
+        body: JSON.stringify({ phone, purpose: "register" })
+      }),
+      testEnv
+    );
+    const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
+    const register = await handleRequest(
+      new Request("https://example.com/api/auth/register-phone", {
+        method: "POST",
+        body: JSON.stringify({ phone, code: codePayload.data.devCode })
+      }),
+      testEnv
+    );
+    const cookie = register.headers.get("set-cookie")?.split(";")[0] ?? "";
+
+    const invalid = await handleRequest(
+      new Request("https://example.com/api/records", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({ date: "2026-05-07", dimension: "", hours: 13 })
+      }),
+      testEnv
+    );
+    expect(invalid.status).toBe(400);
+
+    const create = await handleRequest(
+      new Request("https://example.com/api/records", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({ date: "2026-05-07", dimension: "科研学习", hours: 4, description: "深度学习" })
+      }),
+      testEnv
+    );
+    const createPayload = (await json(create)) as { data: { record: { id: string } } };
+
+    const update = await handleRequest(
+      new Request(`https://example.com/api/records/${createPayload.data.record.id}`, {
+        method: "PATCH",
+        headers: { cookie },
+        body: JSON.stringify({ date: "2026-05-08", dimension: "编程能力", hours: 2.5, description: "接口开发" })
+      }),
+      testEnv
+    );
+    expect(update.status).toBe(200);
+    expect(database.records[0]).toMatchObject({ dimension: "编程能力", description: "接口开发" });
+
+    const remove = await handleRequest(
+      new Request(`https://example.com/api/records/${createPayload.data.record.id}`, {
+        method: "DELETE",
+        headers: { cookie }
+      }),
+      testEnv
+    );
+    expect(remove.status).toBe(200);
+    expect(database.records).toHaveLength(0);
   });
 });

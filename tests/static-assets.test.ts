@@ -15,6 +15,7 @@ describe("static web assets", () => {
 
     expect(html).toContain("园中月努力可视化系统");
     expect(script).toContain("/api/me");
+    expect(script).toContain("/api/dashboard");
     expect(script).toContain("/api/auth/request-phone-code");
     expect(script).toContain("/api/auth/register-phone");
     expect(script).toContain("/api/me/password");

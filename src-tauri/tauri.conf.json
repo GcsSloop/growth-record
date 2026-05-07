@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Growth Record",
+  "version": "0.1.0",
+  "identifier": "com.gcssloop.growthrecord",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:8787",
+    "frontendDist": "../public"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "园中月努力可视化系统",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 390,
+        "minHeight": 700,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app", "msi", "nsis"],
+    "category": "Productivity",
+    "shortDescription": "Personal growth record client",
+    "longDescription": "Desktop client for the Growth Record personal growth check-in system.",
+    "macOS": {
+      "minimumSystemVersion": "10.13"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      }
+    }
+  }
+}

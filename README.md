@@ -12,6 +12,7 @@ The target deployment uses Cloudflare Workers for API and access control, Cloudf
 - Authenticated web app and `/admin` management route planned
 - Quality gate with TypeScript checks and Vitest coverage thresholds
 - Flutter mobile shell planned under `apps/mobile`
+- Tauri 2 desktop shell for macOS and Windows under `src-tauri`
 
 ## Project Status
 
@@ -24,6 +25,7 @@ This repository is in an incremental migration. The original static page is pres
 - Cloudflare account
 - Wrangler CLI, installed through project dev dependencies
 - Flutter SDK for mobile shell work
+- Rust toolchain and platform build tools for Tauri desktop builds
 
 ## Quick Start
 
@@ -70,6 +72,18 @@ Deploy:
 npm run deploy
 ```
 
+## Desktop Clients
+
+The Tauri 2 desktop shell wraps the same web experience for macOS and Windows.
+
+```bash
+npm run desktop:dev
+npm run desktop:build:mac
+npm run desktop:build:windows
+```
+
+macOS bundles should be built on macOS. Windows bundles should be built on Windows unless a dedicated cross-compilation pipeline is added.
+
 ## Development Workflow
 
 Work is split into PDCA cycles. Each cycle should:
@@ -87,6 +101,7 @@ Work is split into PDCA cycles. Each cycle should:
 ├── docs/plans/                      # PDCA plans and implementation notes
 ├── migrations/                      # Cloudflare D1 SQL migrations
 ├── public/                          # Pages-compatible static web assets
+├── src-tauri/                       # Tauri 2 desktop client for macOS/Windows
 ├── src/worker/                      # Cloudflare Worker API
 ├── tests/                           # Unit tests
 └── apps/mobile/                     # Flutter WebView shell

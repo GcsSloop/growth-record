@@ -15,6 +15,7 @@
           <p>自由才是我永恒的向往</p>
         </div>
         <nav class="actions app-only" aria-label="主要操作" hidden>
+          <button class="button ghost" id="openUserManagement" type="button">用户管理</button>
           <button class="button primary" id="checkinButton" type="button">打卡</button>
         </nav>
       </header>
@@ -25,19 +26,62 @@
           <h2>登录后访问你的成长记录</h2>
           <p>请输入账号信息登录。未登录前不会显示个人记录、统计数据或后台入口。</p>
         </div>
-        <form class="login-panel" id="loginForm">
-          <label>
-            手机号或用户名
-            <input name="account" autocomplete="username" placeholder="手机号 / 用户名">
-          </label>
-          <label>
-            密码或验证码
-            <input name="credential" autocomplete="current-password" placeholder="密码 / 验证码">
-          </label>
-          <button class="button primary" type="button">登录</button>
-        </form>
+        <div class="login-panel">
+          <div class="segmented-control" aria-label="认证方式">
+            <button class="segment active" data-auth-tab="login" type="button">登录</button>
+            <button class="segment" data-auth-tab="register" type="button">注册</button>
+          </div>
+          <form id="loginForm">
+            <label>
+              手机号
+              <input name="account" autocomplete="username" placeholder="手机号">
+            </label>
+            <label>
+              密码
+              <input name="password" autocomplete="current-password" type="password" placeholder="密码">
+            </label>
+            <button class="button primary" type="submit">登录</button>
+          </form>
+          <form id="registerForm" hidden>
+            <label>
+              手机号
+              <input name="phone" autocomplete="tel" placeholder="手机号">
+            </label>
+            <div class="inline-fields">
+              <label>
+                验证码
+                <input name="code" inputmode="numeric" placeholder="6 位验证码">
+              </label>
+              <button class="button ghost" id="requestRegisterCode" type="button">获取验证码</button>
+            </div>
+            <button class="button primary" type="submit">注册并登录</button>
+          </form>
+          <p class="form-status" id="authStatus" aria-live="polite"></p>
+        </div>
       </section>
       <section id="appContent" hidden></section>
     </main>
+
+    <div class="modal-overlay" id="userManagementModal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="userManagementTitle">
+        <h2 id="userManagementTitle">用户管理</h2>
+        <p class="muted">设置密码后，可以通过手机号 + 密码登录。</p>
+        <form id="setPasswordForm">
+          <label>
+            设置密码
+            <input name="password" autocomplete="new-password" type="password" placeholder="至少 8 位">
+          </label>
+          <label>
+            确认密码
+            <input name="confirmPassword" autocomplete="new-password" type="password" placeholder="再次输入">
+          </label>
+          <div class="actions">
+            <button class="button ghost" id="closeUserManagement" type="button">取消</button>
+            <button class="button primary" type="submit">保存密码</button>
+          </div>
+        </form>
+        <p class="form-status" id="passwordStatus" aria-live="polite"></p>
+      </section>
+    </div>
   </body>
 </html>

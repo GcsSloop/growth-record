@@ -4,7 +4,10 @@ import {
   handleAdminResetPassword,
   handleAdminSetupPassword,
   handleCurrentUser,
-  handlePasswordLogin
+  handlePasswordLogin,
+  handlePhoneRegistration,
+  handleRequestPhoneCode,
+  handleSetCurrentUserPassword
 } from "./auth";
 import { apiError, json, notFound, notImplemented } from "./http";
 import type { Env } from "./types";
@@ -36,8 +39,20 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     return handlePasswordLogin(request, env);
   }
 
+  if (url.pathname === "/api/auth/request-phone-code" && request.method === "POST") {
+    return handleRequestPhoneCode(request, env);
+  }
+
+  if (url.pathname === "/api/auth/register-phone" && request.method === "POST") {
+    return handlePhoneRegistration(request, env);
+  }
+
   if (url.pathname === "/api/me" && request.method === "GET") {
     return handleCurrentUser(request, env);
+  }
+
+  if (url.pathname === "/api/me/password" && request.method === "POST") {
+    return handleSetCurrentUserPassword(request, env);
   }
 
   if (url.pathname.startsWith("/api/")) {

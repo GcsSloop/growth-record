@@ -145,6 +145,50 @@ h1 {
   gap: 14px;
 }
 
+.login-panel form {
+  display: grid;
+  gap: 14px;
+}
+
+.segmented-control {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+}
+
+.segment {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: var(--text-secondary);
+  background: transparent;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.segment.active {
+  color: #1a1a0a;
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+}
+
+.inline-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.form-status {
+  min-height: 1.4em;
+  color: var(--gold);
+  font-size: 0.84rem;
+}
+
 label {
   display: grid;
   gap: 6px;
@@ -161,6 +205,32 @@ input {
   background: #111320;
   color: var(--text-primary);
   font: inherit;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 20;
+}
+
+.modal {
+  width: min(480px, 100%);
+  display: grid;
+  gap: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-active);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.modal form {
+  display: grid;
+  gap: 14px;
 }
 
 .dashboard-grid {
@@ -284,6 +354,10 @@ th {
   }
 
   .placeholder-list {
+    grid-template-columns: 1fr;
+  }
+
+  .inline-fields {
     grid-template-columns: 1fr;
   }
 }

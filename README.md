@@ -93,6 +93,12 @@ curl -X POST https://growth-record.gcssloop.workers.dev/api/admin/reset-password
 
 After reset, `/admin` returns to the first-visit password setup state. Do not expose `ADMIN_RESET_KEY` in frontend code, logs, or documentation.
 
+## Registration And Sessions
+
+Users can register with a phone verification code. Successful registration creates an HttpOnly session cookie valid for 30 days. Authenticated `/api/me` checks refresh the session for another 30 days, so users who keep returning within that window stay signed in. If a user is inactive for more than 30 consecutive days, they must authenticate again.
+
+Phone code delivery requires an SMS provider. Cloudflare does not provide a general application SMS OTP product for this use case. For local development only, set `DEV_SMS_CODES=true` to return the generated verification code in the API response. Do not enable this setting on a public deployment.
+
 ## Desktop Clients
 
 The Tauri 2 desktop shell wraps the same web experience for macOS and Windows.

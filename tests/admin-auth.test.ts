@@ -25,6 +25,7 @@ class FakeStatement {
 class FakeD1Database {
   users = new Map<string, Record<string, unknown>>();
   sessions: Array<Record<string, unknown>> = [];
+  phoneCodes: Array<Record<string, unknown>> = [];
 
   prepare(sql: string): FakeStatement {
     return new FakeStatement(this, sql);
@@ -32,7 +33,10 @@ class FakeD1Database {
 
   async first<T>(sql: string, bindings: unknown[]): Promise<T | null> {
     if (sql.includes("password_hash") && sql.includes("FROM users WHERE username = ?")) {
-      return (this.findUserByUsername(String(bindings[0])) as T) ?? null;
+      return (this.findUserByAccount(String(bindings[0])) as T) ?? null;
+    }
+    if (sql.includes("FROM users WHERE phone = ?")) {
+      return (this.findUserByPhone(String(bindings[0])) as T) ?? null;
     }
     if (sql.includes("SELECT id, username, role, status FROM users WHERE username = ?")) {
       const user = this.findUserByUsername(String(bindings[0]));
@@ -40,7 +44,7 @@ class FakeD1Database {
       const { id, username, role, status } = user;
       return { id, username, role, status } as T;
     }
-    if (sql.includes("SELECT u.id, u.username, u.role, u.status FROM sessions")) {
+    if (sql.includes("FROM sessions s JOIN users u")) {
       const tokenHash = String(bindings[0]);
       const session = this.sessions.find((entry) => entry.token_hash === tokenHash);
       if (!session) return null;
@@ -53,12 +57,24 @@ class FakeD1Database {
         status: user.status
       } as T;
     }
+    if (sql.includes("SELECT code_hash FROM phone_verification_codes")) {
+      const [phone, purpose] = bindings;
+      const code = [...this.phoneCodes]
+        .reverse()
+        .find((entry) => entry.phone === phone && entry.purpose === purpose && !entry.consumed_at);
+      return (code as T) ?? null;
+    }
     throw new Error(`Unhandled first SQL: ${sql}`);
   }
 
   async run(sql: string, bindings: unknown[]): Promise<D1Result> {
     if (sql.includes("INSERT INTO users")) {
-      const [id, phone, username, role, status, displayName] = bindings;
+      const isGeneratedUsername = !sql.includes("NULL");
+      const [id, phone] = bindings;
+      const username = isGeneratedUsername ? bindings[2] : null;
+      const role = isGeneratedUsername ? bindings[3] : bindings[2];
+      const status = isGeneratedUsername ? bindings[4] : bindings[3];
+      const displayName = isGeneratedUsername ? bindings[5] : bindings[4];
       this.users.set(String(id), {
         id,
         phone,
@@ -71,6 +87,25 @@ class FakeD1Database {
       });
       return fakeResult();
     }
+    if (sql.includes("INSERT INTO phone_verification_codes")) {
+      const [id, phone, codeHash, purpose] = bindings;
+      this.phoneCodes.push({ id, phone, code_hash: codeHash, purpose, consumed_at: null });
+      return fakeResult();
+    }
+    if (sql.includes("UPDATE phone_verification_codes SET consumed_at")) {
+      const [phone, purpose] = bindings;
+      const code = [...this.phoneCodes]
+        .reverse()
+        .find((entry) => entry.phone === phone && entry.purpose === purpose && !entry.consumed_at);
+      if (code) code.consumed_at = "now";
+      return fakeResult();
+    }
+    if (sql.includes("UPDATE sessions SET expires_at")) {
+      const [tokenHash] = bindings;
+      const session = this.sessions.find((entry) => entry.token_hash === tokenHash);
+      if (session) session.refreshed = true;
+      return fakeResult();
+    }
     if (sql.includes("UPDATE users SET password_hash = NULL")) {
       const [username] = bindings;
       const user = this.findUserByUsername(String(username));
@@ -81,8 +116,10 @@ class FakeD1Database {
       return fakeResult();
     }
     if (sql.includes("UPDATE users SET password_hash = ?")) {
-      const [passwordHash, passwordSalt, username] = bindings;
-      const user = this.findUserByUsername(String(username));
+      const [passwordHash, passwordSalt, lookup] = bindings;
+      const user = sql.includes("WHERE id = ?")
+        ? this.users.get(String(lookup))
+        : this.findUserByUsername(String(lookup));
       if (user) {
         user.password_hash = passwordHash;
         user.password_salt = passwordSalt;
@@ -104,6 +141,14 @@ class FakeD1Database {
 
   private findUserByUsername(username: string): Record<string, unknown> | undefined {
     return [...this.users.values()].find((user) => user.username === username);
+  }
+
+  private findUserByPhone(phone: string): Record<string, unknown> | undefined {
+    return [...this.users.values()].find((user) => user.phone === phone);
+  }
+
+  private findUserByAccount(account: string): Record<string, unknown> | undefined {
+    return this.findUserByUsername(account) ?? this.findUserByPhone(account);
   }
 }
 
@@ -128,6 +173,7 @@ function env(db = new FakeD1Database(), overrides: Partial<Env> = {}): Env {
     DB: db as unknown as D1Database,
     SESSION_SECRET: "test-secret",
     ADMIN_RESET_KEY: "reset-key",
+    DEV_SMS_CODES: "true",
     ...overrides
   };
 }
@@ -193,6 +239,7 @@ describe("admin authentication bootstrap", () => {
 
     expect(login.status).toBe(200);
     expect(login.headers.get("set-cookie")).toContain("growth_session=");
+    expect(login.headers.get("set-cookie")).toContain("Max-Age=2592000");
     expect(login.headers.get("set-cookie")).toContain("HttpOnly");
   });
 
@@ -267,6 +314,7 @@ describe("admin authentication bootstrap", () => {
       testEnv
     );
     expect(currentUser.status).toBe(200);
+    expect(currentUser.headers.get("set-cookie")).toContain("Max-Age=2592000");
     await expect(json(currentUser)).resolves.toMatchObject({
       data: {
         user: {
@@ -283,6 +331,83 @@ describe("admin authentication bootstrap", () => {
       testEnv
     );
     expect(invalidCookie.status).toBe(401);
+  });
+
+  it("registers a phone user with a verification code and creates a 30 day session", async () => {
+    const database = new FakeD1Database();
+    const testEnv = env(database);
+    const phone = "13800138000";
+
+    const codeResponse = await handleRequest(
+      new Request("https://example.com/api/auth/request-phone-code", {
+        method: "POST",
+        body: JSON.stringify({ phone, purpose: "register" })
+      }),
+      testEnv
+    );
+    expect(codeResponse.status).toBe(200);
+    const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
+
+    const register = await handleRequest(
+      new Request("https://example.com/api/auth/register-phone", {
+        method: "POST",
+        body: JSON.stringify({ phone, code: codePayload.data.devCode })
+      }),
+      testEnv
+    );
+
+    expect(register.status).toBe(200);
+    expect(register.headers.get("set-cookie")).toContain("Max-Age=2592000");
+    expect([...database.users.values()]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          phone,
+          role: "user",
+          status: "active"
+        })
+      ])
+    );
+  });
+
+  it("lets the current user set a password and then login by phone and password", async () => {
+    const database = new FakeD1Database();
+    const testEnv = env(database);
+    const phone = "13900139000";
+    const codeResponse = await handleRequest(
+      new Request("https://example.com/api/auth/request-phone-code", {
+        method: "POST",
+        body: JSON.stringify({ phone, purpose: "register" })
+      }),
+      testEnv
+    );
+    const codePayload = (await json(codeResponse)) as { data: { devCode: string } };
+    const register = await handleRequest(
+      new Request("https://example.com/api/auth/register-phone", {
+        method: "POST",
+        body: JSON.stringify({ phone, code: codePayload.data.devCode })
+      }),
+      testEnv
+    );
+    const cookie = register.headers.get("set-cookie")?.split(";")[0];
+
+    const password = await handleRequest(
+      new Request("https://example.com/api/me/password", {
+        method: "POST",
+        headers: { cookie: cookie ?? "" },
+        body: JSON.stringify({ password: "UserPassword123" })
+      }),
+      testEnv
+    );
+    expect(password.status).toBe(200);
+
+    const login = await handleRequest(
+      new Request("https://example.com/api/auth/login-password", {
+        method: "POST",
+        body: JSON.stringify({ account: phone, password: "UserPassword123" })
+      }),
+      testEnv
+    );
+    expect(login.status).toBe(200);
   });
 
   it("clears the admin password only with the backend reset key", async () => {

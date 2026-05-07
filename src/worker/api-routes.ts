@@ -18,6 +18,7 @@ export const API_ROUTES = [
   { name: "admin-reset-password", method: "POST", path: "/api/admin/reset-password", access: "admin" },
   { name: "logout", method: "POST", path: "/api/auth/logout", access: "user" },
   { name: "current-user", method: "GET", path: "/api/me", access: "user" },
+  { name: "set-current-user-password", method: "POST", path: "/api/me/password", access: "user" },
   { name: "list-records", method: "GET", path: "/api/records", access: "user" },
   { name: "create-record", method: "POST", path: "/api/records", access: "user" },
   { name: "update-record", method: "PATCH", path: "/api/records/:id", access: "user" },

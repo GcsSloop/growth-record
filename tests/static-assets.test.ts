@@ -15,6 +15,12 @@ describe("static web assets", () => {
 
     expect(html).toContain("园中月努力可视化系统");
     expect(script).toContain("/api/me");
+    expect(script).toContain("/api/auth/request-phone-code");
+    expect(script).toContain("/api/auth/register-phone");
+    expect(script).toContain("/api/me/password");
+    expect(html).toContain("userManagementModal");
+    expect(html).toContain("注册");
+    expect(html).toContain("设置密码");
     expect(html).not.toContain('href="/admin"');
     expect(html).not.toContain("今日打卡状态");
     expect(html).not.toContain("执行记录");

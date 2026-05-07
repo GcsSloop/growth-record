@@ -6,5 +6,4 @@ assets = { directory = "./public" }
 [[d1_databases]]
 binding = "DB"
 database_name = "growth-record"
-database_id = "00000000-0000-0000-0000-000000000000"
-preview_database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "a5a0a697-f26d-4c2e-b052-e97ed45fb80c"

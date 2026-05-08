@@ -162,7 +162,7 @@ export async function handlePasswordLogin(request: Request, env: Env): Promise<R
 }
 
 export async function handleEmailRegistration(request: Request, env: Env): Promise<Response> {
-  const { email, password } = await readJsonBody<{ email?: string; password?: string }>(request);
+  const { email, password, username } = await readJsonBody<{ email?: string; password?: string; username?: string }>(request);
   const normalizedEmail = normalizeEmail(email);
   if (!normalizedEmail) return apiError("invalid_email", "A valid email address is required.", 400);
   const validation = validatePassword(password);
@@ -170,14 +170,18 @@ export async function handleEmailRegistration(request: Request, env: Env): Promi
 
   const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(normalizedEmail).first<AdminUser>();
   if (existing) return apiError("email_already_registered", "This email address is already registered.", 409);
+  const normalizedUsername = normalizeUsername(username || usernameFromEmail(normalizedEmail));
+  if (!normalizedUsername) return apiError("invalid_username", "A valid username is required.", 400);
+  const existingUsername = await env.DB.prepare("SELECT id FROM users WHERE username = ?").bind(normalizedUsername).first<AdminUser>();
+  if (existingUsername) return apiError("username_already_registered", "This username is already registered.", 409);
 
   const userId = crypto.randomUUID();
   const salt = randomToken();
   const passwordHash = await hashPassword(password as string, salt);
   await env.DB.prepare(
-    "INSERT INTO users (id, email, phone, username, password_hash, password_salt, role, status, display_name, must_change_password, created_at, updated_at) VALUES (?, ?, NULL, NULL, ?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))"
+    "INSERT INTO users (id, email, phone, username, password_hash, password_salt, role, status, display_name, must_change_password, created_at, updated_at) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, 0, datetime('now'), datetime('now'))"
   )
-    .bind(userId, normalizedEmail, passwordHash, salt, "user", "active", normalizedEmail)
+    .bind(userId, normalizedEmail, normalizedUsername, passwordHash, salt, "user", "active", normalizedUsername)
     .run();
 
   const { token } = await createSession(env, userId);
@@ -186,6 +190,7 @@ export async function handleEmailRegistration(request: Request, env: Env): Promi
       user: {
         id: userId,
         email: normalizedEmail,
+        username: normalizedUsername,
         role: "user"
       }
     },
@@ -347,10 +352,18 @@ export async function handleAdminCreateUser(request: Request, env: Env): Promise
     role?: "admin" | "user";
     status?: "active" | "disabled";
   }>(request);
-  const email = normalizeEmail(body.email);
-  if (!email) return apiError("invalid_email", "A valid email address is required.", 400);
+  const email = normalizeOptionalEmail(body.email);
+  if (email instanceof Response) return email;
   const phone = normalizeOptionalPhone(body.phone);
   if (phone instanceof Response) return phone;
+  const username = normalizeUsername(body.username);
+  if (!username) return apiError("invalid_username", "Username is required.", 400);
+  const existingUsername = await env.DB.prepare("SELECT id FROM users WHERE username = ?").bind(username).first<AdminUser>();
+  if (existingUsername) return apiError("username_already_registered", "This username is already registered.", 409);
+  if (email) {
+    const existingEmail = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first<AdminUser>();
+    if (existingEmail) return apiError("email_already_registered", "This email address is already registered.", 409);
+  }
 
   const userId = crypto.randomUUID();
   const defaultPassword = generateDefaultPassword();
@@ -358,7 +371,6 @@ export async function handleAdminCreateUser(request: Request, env: Env): Promise
   const passwordHash = await hashPassword(defaultPassword, salt);
   const role = body.role === "admin" ? "admin" : "user";
   const status = body.status === "disabled" ? "disabled" : "active";
-  const username = body.username?.trim() || null;
   const displayName = body.displayName?.trim() || username || email;
 
   await env.DB.prepare(
@@ -370,7 +382,7 @@ export async function handleAdminCreateUser(request: Request, env: Env): Promise
   return json({
     user: {
       id: userId,
-      email,
+      email: email ?? "",
       phone,
       username,
       role,
@@ -395,14 +407,25 @@ export async function handleAdminUpdateUser(request: Request, env: Env, userId: 
     role?: "admin" | "user";
     status?: "active" | "disabled";
   }>(request);
-  const email = normalizeEmail(body.email);
-  if (!email) return apiError("invalid_email", "A valid email address is required.", 400);
+  const email = normalizeOptionalEmail(body.email);
+  if (email instanceof Response) return email;
   const phone = normalizeOptionalPhone(body.phone);
   if (phone instanceof Response) return phone;
+  const username = normalizeUsername(body.username);
+  if (!username) return apiError("invalid_username", "Username is required.", 400);
+  const existingUsername = await env.DB.prepare("SELECT id FROM users WHERE username = ?").bind(username).first<AdminUser>();
+  if (existingUsername && existingUsername.id !== userId) {
+    return apiError("username_already_registered", "This username is already registered.", 409);
+  }
+  if (email) {
+    const existingEmail = await env.DB.prepare("SELECT id FROM users WHERE email = ?").bind(email).first<AdminUser>();
+    if (existingEmail && existingEmail.id !== userId) {
+      return apiError("email_already_registered", "This email address is already registered.", 409);
+    }
+  }
 
   const role = body.role === "admin" ? "admin" : "user";
   const status = body.status === "disabled" ? "disabled" : "active";
-  const username = body.username?.trim() || null;
   const displayName = body.displayName?.trim() || username || email;
 
   await env.DB.prepare(
@@ -814,6 +837,24 @@ function normalizeEmail(email: string | undefined): string | null {
   const value = email.trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) || value.length > 254) return null;
   return value;
+}
+
+function normalizeOptionalEmail(email: string | undefined): string | null | Response {
+  if (!email || !email.trim()) return null;
+  const value = normalizeEmail(email);
+  if (!value) return apiError("invalid_email", "Email address is invalid.", 400);
+  return value;
+}
+
+function normalizeUsername(username: string | undefined): string | null {
+  if (typeof username !== "string") return null;
+  const value = username.trim();
+  if (!value || value.length > 64 || /[\s@]/.test(value)) return null;
+  return value;
+}
+
+function usernameFromEmail(email: string): string {
+  return email.split("@")[0] || email;
 }
 
 function normalizeOptionalPhone(phone: string | undefined): string | null | Response {

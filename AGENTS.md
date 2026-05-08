@@ -42,6 +42,9 @@ Every implementation cycle must be small and committed separately:
 - Never store plaintext passwords.
 - Prefer HttpOnly cookies for sessions.
 - Treat email addresses and optional phone numbers as user data.
+- Usernames are required for admin-created users and must stay globally unique.
+- Email registration may omit username; the backend derives the default username from the email prefix.
+- Password login must support both email + password and username + password.
 - Do not log passwords, session tokens, or API keys.
 - Keep `.dev.vars` and `.env*` files out of Git.
 - The default admin username is `admin`; the password is configured on first `/admin` visit.
@@ -73,3 +76,21 @@ Every implementation cycle must be small and committed separately:
 - Keep commits focused to one PDCA cycle.
 - Do not rewrite unrelated files.
 - Do not remove the original static HTML reference until the migration is complete and approved.
+- `master` is protected. Do not push feature work directly after branch protection is enabled.
+- Merge pull requests with linear history only. Do not use merge commits.
+- The required GitHub status check before merge is `Quality Gate`.
+
+## Automation Rules
+
+- `.github/workflows/ci.yml` runs `npm run quality` on pushes to `master` and pull requests targeting `master`.
+- `.github/workflows/deploy-worker.yml` deploys Cloudflare Workers only from tags matching `dpw-v*.*.*`.
+- `.github/workflows/release-clients.yml` packages clients only from tags matching `v*.*.*`.
+- Release and deploy tags must point to commits contained in `master`.
+- Required GitHub secrets for Worker deploy are `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+- Optional GitHub variable for client builds is `GROWTH_RECORD_WEB_URL`.
+- Never place real CI secrets, Cloudflare tokens, signing keys, or provisioning profiles in repository files.
+
+## Repository Skills
+
+- Use `skills/deploy-worker/SKILL.md` before deploying the Cloudflare Worker or explaining Worker deployment.
+- Use `skills/package-clients/SKILL.md` before building or explaining native client packages.

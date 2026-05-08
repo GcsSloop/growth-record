@@ -97,9 +97,11 @@ The admin backend can create, list, edit, disable, delete, and reset regular use
 
 ## Registration And Sessions
 
-Users can register with email and password. Successful registration creates an HttpOnly session cookie valid for 30 days. Authenticated `/api/me` checks refresh the session for another 30 days, so users who keep returning within that window stay signed in. If a user is inactive for more than 30 consecutive days, they must authenticate again.
+Users can register with email, username, and password. The username field is optional during email registration; when it is omitted, the system uses the part before `@` in the email address. Usernames must be unique and cannot contain whitespace or `@`. Users can later authenticate with either email + password or username + password. Successful registration creates an HttpOnly session cookie valid for 30 days. Authenticated `/api/me` checks refresh the session for another 30 days, so users who keep returning within that window stay signed in. If a user is inactive for more than 30 consecutive days, they must authenticate again.
 
 The user model keeps an optional phone field for admin-managed profile data, but the public web registration flow does not expose phone registration or phone verification.
+
+Admins can create users without an email address, but username is required for every admin-created user. Admin-created usernames must be unique. If the admin supplies a default email, users can sign in with email + password or username + password after setting their own password.
 
 ## Desktop Clients
 
@@ -134,6 +136,74 @@ release/v0.1.0/growth_record-darwin-arm64-v0.1.0.dmg
 release/v0.1.0/growth_record-android-arm64-v0.1.0.apk
 release/v0.1.0/growth_record-ios-arm64-v0.1.0.app
 ```
+
+## GitHub Actions
+
+The repository uses GitHub Actions for quality checks, Worker deployment, and client packaging.
+
+### CI
+
+`.github/workflows/ci.yml` runs on:
+
+- pushes to `master`;
+- pull requests targeting `master`.
+
+The required job is named `Quality Gate` and runs:
+
+```bash
+npm ci
+npm run quality
+```
+
+Branch protection should require this check before a PR can merge.
+
+### Worker Deployment
+
+`.github/workflows/deploy-worker.yml` deploys the Cloudflare Worker when a tag like `dpw-v0.1.0` is pushed:
+
+```bash
+git tag dpw-v0.1.0
+git push origin dpw-v0.1.0
+```
+
+The workflow verifies that the tagged commit is contained in `master`, runs the quality gate, then runs `npx wrangler deploy`.
+
+Configure these GitHub repository secrets before using CI deploys:
+
+```text
+CLOUDFLARE_API_TOKEN
+CLOUDFLARE_ACCOUNT_ID
+```
+
+The Cloudflare token should have only the permissions needed to deploy this Worker and access the configured account resources. Do not commit tokens, `.dev.vars`, or `.env*` files.
+
+### Client Releases
+
+`.github/workflows/release-clients.yml` builds native clients when a version tag like `v0.1.0` is pushed:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+The workflow verifies that the tagged commit is contained in `master`, runs the quality gate, derives the application version from the tag, builds Android, iOS, macOS, and Windows artifacts, then uploads them to a GitHub Release.
+
+Optional repository variable:
+
+```text
+GROWTH_RECORD_WEB_URL
+```
+
+If `GROWTH_RECORD_WEB_URL` is not set, Flutter builds use `https://growth-record.gcssloop.workers.dev`.
+
+## Repository Skills
+
+Repository-specific AI/operator skills live in `skills/`:
+
+- `skills/deploy-worker/SKILL.md` describes local and CI Worker deployment.
+- `skills/package-clients/SKILL.md` describes local and CI client packaging.
+
+Use these files as the first reference when another AI agent or contributor needs to deploy or package the project.
 
 ## Development Workflow
 

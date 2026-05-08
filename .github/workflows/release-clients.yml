@@ -1,0 +1,228 @@
+name: Release Clients
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  quality:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify release tag is on master
+        run: |
+          git fetch origin master
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/master
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run quality gate
+        run: npm run quality
+
+  android:
+    name: Android APK
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Set release version
+        run: node scripts/set-release-version.mjs "$GITHUB_REF_NAME"
+
+      - name: Install Flutter dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Build Android APK
+        working-directory: apps/mobile
+        run: flutter build apk --release --dart-define=GROWTH_RECORD_WEB_URL=${{ vars.GROWTH_RECORD_WEB_URL || 'https://growth-record.gcssloop.workers.dev' }}
+
+      - name: Collect Android artifact
+        run: node scripts/collect-release-artifacts.mjs "$GITHUB_REF_NAME" android
+
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: growth-record-android-${{ github.ref_name }}
+          path: release/${{ github.ref_name }}/
+
+  ios:
+    name: iOS App
+    needs: quality
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Set release version
+        run: node scripts/set-release-version.mjs "$GITHUB_REF_NAME"
+
+      - name: Install Flutter dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Build iOS app without codesigning
+        working-directory: apps/mobile
+        run: flutter build ios --release --no-codesign --dart-define=GROWTH_RECORD_WEB_URL=${{ vars.GROWTH_RECORD_WEB_URL || 'https://growth-record.gcssloop.workers.dev' }}
+
+      - name: Collect iOS artifact
+        run: node scripts/collect-release-artifacts.mjs "$GITHUB_REF_NAME" ios
+
+      - name: Compress iOS app bundle
+        run: |
+          cd "release/$GITHUB_REF_NAME"
+          for app in *.app; do
+            zip -qry "${app}.zip" "$app"
+            rm -rf "$app"
+          done
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: growth-record-ios-${{ github.ref_name }}
+          path: release/${{ github.ref_name }}/
+
+  macos:
+    name: macOS Desktop
+    needs: quality
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Set release version
+        run: node scripts/set-release-version.mjs "$GITHUB_REF_NAME"
+
+      - name: Build macOS desktop app
+        run: npm run desktop:build:mac
+
+      - name: Collect macOS artifacts
+        run: node scripts/collect-release-artifacts.mjs "$GITHUB_REF_NAME" darwin-arm64
+
+      - name: Compress macOS app bundle
+        run: |
+          cd "release/$GITHUB_REF_NAME"
+          for app in *.app; do
+            zip -qry "${app}.zip" "$app"
+            rm -rf "$app"
+          done
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: growth-record-macos-${{ github.ref_name }}
+          path: release/${{ github.ref_name }}/
+
+  windows:
+    name: Windows Desktop
+    needs: quality
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Set release version
+        run: node scripts/set-release-version.mjs "$env:GITHUB_REF_NAME"
+
+      - name: Build Windows desktop app
+        run: npm run desktop:build:windows
+
+      - name: Collect Windows artifacts
+        run: node scripts/collect-release-artifacts.mjs "$env:GITHUB_REF_NAME" windows-x64
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: growth-record-windows-${{ github.ref_name }}
+          path: release/${{ github.ref_name }}/
+
+  publish:
+    name: Publish GitHub Release
+    needs:
+      - android
+      - ios
+      - macos
+      - windows
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded-artifacts
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: downloaded-artifacts/**/*
+          fail_on_unmatched_files: true

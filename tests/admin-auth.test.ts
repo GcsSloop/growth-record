@@ -64,6 +64,9 @@ class FakeD1Database {
     if (sql.includes("SELECT id FROM users WHERE email = ?")) {
       return (this.findUserByEmail(String(bindings[0])) as T) ?? null;
     }
+    if (sql.includes("SELECT id FROM users WHERE username = ?")) {
+      return (this.findUserByUsername(String(bindings[0])) as T) ?? null;
+    }
     if (sql.includes("FROM users WHERE phone = ?")) {
       return (this.findUserByPhone(String(bindings[0])) as T) ?? null;
     }
@@ -124,16 +127,15 @@ class FakeD1Database {
 
   async run(sql: string, bindings: unknown[]): Promise<D1Result> {
     if (sql.includes("INSERT INTO users") && sql.includes("password_hash") && sql.includes("must_change_password")) {
-      const [id, email, maybePhone, maybeUsername, maybePasswordHash, maybePasswordSalt, maybeRole, maybeStatus, maybeDisplayName] =
-        bindings;
-      const isEmailRegistration = sql.includes("?, ?, NULL, NULL");
-      const phone = isEmailRegistration ? null : maybePhone;
-      const username = isEmailRegistration ? null : maybeUsername;
-      const passwordHash = isEmailRegistration ? maybePhone : maybePasswordHash;
-      const passwordSalt = isEmailRegistration ? maybeUsername : maybePasswordSalt;
-      const role = isEmailRegistration ? maybePasswordHash : maybeRole;
-      const status = isEmailRegistration ? maybePasswordSalt : maybeStatus;
-      const displayName = isEmailRegistration ? maybeRole : maybeDisplayName;
+      const isEmailRegistration = bindings.length === 8;
+      const [id, email] = bindings;
+      const phone = isEmailRegistration ? null : bindings[2];
+      const username = isEmailRegistration ? bindings[2] : bindings[3];
+      const passwordHash = isEmailRegistration ? bindings[3] : bindings[4];
+      const passwordSalt = isEmailRegistration ? bindings[4] : bindings[5];
+      const role = isEmailRegistration ? bindings[5] : bindings[6];
+      const status = isEmailRegistration ? bindings[6] : bindings[7];
+      const displayName = isEmailRegistration ? bindings[7] : bindings[8];
       this.users.set(String(id), {
         id,
         email,
@@ -496,6 +498,14 @@ describe("admin authentication bootstrap", () => {
       testEnv
     );
     expect(invalidCookie.status).toBe(401);
+
+    const unrelatedCookie = await handleRequest(
+      new Request("https://example.com/api/me", {
+        headers: { cookie: "theme=dark" }
+      }),
+      testEnv
+    );
+    expect(unrelatedCookie.status).toBe(401);
   });
 
   it("registers an email user and creates a 30 day session", async () => {
@@ -517,11 +527,45 @@ describe("admin authentication bootstrap", () => {
       expect.arrayContaining([
         expect.objectContaining({
           email,
+          username: "user",
           role: "user",
           status: "active"
         })
       ])
     );
+  });
+
+  it("lets email users choose a unique username and login with it", async () => {
+    const database = new FakeD1Database();
+    const testEnv = env(database);
+
+    const register = await handleRequest(
+      new Request("https://example.com/api/auth/register-email", {
+        method: "POST",
+        body: JSON.stringify({ email: "named@example.com", username: "named-user", password: "UserPassword123" })
+      }),
+      testEnv
+    );
+
+    expect(register.status).toBe(200);
+    expect([...database.users.values()]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          email: "named@example.com",
+          username: "named-user",
+          display_name: "named-user"
+        })
+      ])
+    );
+
+    const usernameLogin = await handleRequest(
+      new Request("https://example.com/api/auth/login-password", {
+        method: "POST",
+        body: JSON.stringify({ account: "named-user", password: "UserPassword123" })
+      }),
+      testEnv
+    );
+    expect(usernameLogin.status).toBe(200);
   });
 
   it("lets the current user set a password and then login by email and password", async () => {
@@ -596,6 +640,15 @@ describe("admin authentication bootstrap", () => {
       testEnv
     );
     expect(duplicate.status).toBe(409);
+
+    const duplicateUsername = await handleRequest(
+      new Request("https://example.com/api/auth/register-email", {
+        method: "POST",
+        body: JSON.stringify({ email: "another@example.com", username: "duplicate", password: "UserPassword123" })
+      }),
+      testEnv
+    );
+    expect(duplicateUsername.status).toBe(409);
   });
 
   it("clears the admin password only with the backend reset key", async () => {
@@ -733,6 +786,57 @@ describe("admin authentication bootstrap", () => {
     );
     expect(remove.status).toBe(200);
     expect(database.users.has(createPayload.data.user.id)).toBe(false);
+  });
+
+  it("lets admins create users with required usernames and optional emails", async () => {
+    const database = new FakeD1Database();
+    const { cookie, testEnv } = await loginAdmin(database);
+
+    const missingUsername = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({ email: "missing-username@example.com" })
+      }),
+      testEnv
+    );
+    expect(missingUsername.status).toBe(400);
+
+    const create = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({
+          username: "admin-created",
+          displayName: "Admin Created",
+          role: "user",
+          status: "active"
+        })
+      }),
+      testEnv
+    );
+    expect(create.status).toBe(200);
+    const createPayload = (await json(create)) as { data: { user: { id: string; email: string }; defaultPassword: string } };
+    expect(createPayload.data.user.email).toBe("");
+
+    const usernameLogin = await handleRequest(
+      new Request("https://example.com/api/auth/login-password", {
+        method: "POST",
+        body: JSON.stringify({ account: "admin-created", password: createPayload.data.defaultPassword })
+      }),
+      testEnv
+    );
+    expect(usernameLogin.status).toBe(200);
+
+    const duplicateUsername = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({ username: "admin-created" })
+      }),
+      testEnv
+    );
+    expect(duplicateUsername.status).toBe(409);
   });
 
   it("returns admin dashboard metrics for users and recent activity", async () => {
@@ -915,11 +1019,41 @@ describe("admin authentication bootstrap", () => {
       new Request("https://example.com/api/admin/users", {
         method: "POST",
         headers: { cookie },
-        body: JSON.stringify({ email: "blank-phone@example.com", phone: "" })
+        body: JSON.stringify({ email: "blank-phone@example.com", phone: "", username: "blank-phone" })
       }),
       testEnv
     );
     expect(blankPhone.status).toBe(200);
+
+    const existingUser = await handleRequest(
+      new Request("https://example.com/api/admin/users", {
+        method: "POST",
+        headers: { cookie },
+        body: JSON.stringify({ email: "existing@example.com", username: "existing-user" })
+      }),
+      testEnv
+    );
+    const existingPayload = (await json(existingUser)) as { data: { user: { id: string } } };
+
+    const duplicateEditUsername = await handleRequest(
+      new Request(`https://example.com/api/admin/users/${existingPayload.data.user.id}`, {
+        method: "PATCH",
+        headers: { cookie },
+        body: JSON.stringify({ email: "existing-new@example.com", username: "blank-phone" })
+      }),
+      testEnv
+    );
+    expect(duplicateEditUsername.status).toBe(409);
+
+    const duplicateEditEmail = await handleRequest(
+      new Request(`https://example.com/api/admin/users/${existingPayload.data.user.id}`, {
+        method: "PATCH",
+        headers: { cookie },
+        body: JSON.stringify({ email: "blank-phone@example.com", username: "existing-user" })
+      }),
+      testEnv
+    );
+    expect(duplicateEditEmail.status).toBe(409);
 
     const editAdmin = await handleRequest(
       new Request("https://example.com/api/admin/users/admin", {
@@ -953,7 +1087,7 @@ describe("admin authentication bootstrap", () => {
       new Request("https://example.com/api/admin/users", {
         method: "POST",
         headers: { cookie },
-        body: JSON.stringify({ email: "disabled@example.com", phone: "13400134000", status: "disabled" })
+        body: JSON.stringify({ email: "disabled@example.com", phone: "13400134000", username: "disabled", status: "disabled" })
       }),
       testEnv
     );

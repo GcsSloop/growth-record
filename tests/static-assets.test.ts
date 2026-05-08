@@ -42,6 +42,7 @@ describe("static web assets", () => {
     expect(script).toContain("toggleTheme");
     expect(html).toContain("注册");
     expect(html).toContain("邮箱");
+    expect(html).toContain("用户名");
     expect(html).not.toContain("验证码");
     expect(html).not.toContain("获取验证码");
     expect(html).toContain("设置密码");
@@ -62,7 +63,9 @@ describe("static web assets", () => {
     expect(html).toContain("管理员登录");
     expect(html).toContain("openCreateUser");
     expect(html).toContain("邮箱");
+    expect(html).toContain("用户名");
     expect(script).toContain("form.elements.email");
+    expect(script).toContain("form.elements.username");
     expect(html).toContain("userEditorModal");
     expect(html).toContain("defaultPasswordModal");
     expect(html).not.toContain("用户数量");

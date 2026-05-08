@@ -127,7 +127,7 @@ async function saveUser(event) {
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    document.getElementById("userEditorStatus").textContent = "保存失败。";
+    document.getElementById("userEditorStatus").textContent = adminErrorMessage(payload.error?.code, "保存失败。");
     return;
   }
   document.getElementById("userEditorModal").hidden = true;
@@ -165,6 +165,17 @@ function escapeHtml(value) {
   const div = document.createElement("div");
   div.textContent = String(value ?? "");
   return div.innerHTML;
+}
+
+function adminErrorMessage(code, fallback) {
+  const messages = {
+    invalid_username: "请输入用户名，不能包含空格或 @。",
+    username_already_registered: "该用户名已被使用。",
+    invalid_email: "邮箱格式不正确。",
+    email_already_registered: "该邮箱已被使用。",
+    invalid_phone: "手机号格式不正确。"
+  };
+  return messages[code] ?? fallback;
 }
 
 document.getElementById("adminSetupForm")?.addEventListener("submit", async (event) => {

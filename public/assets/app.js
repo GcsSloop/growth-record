@@ -45,12 +45,13 @@ async function registerWithEmail(event) {
   const form = event.currentTarget;
   const status = document.getElementById("authStatus");
   const email = form.elements.email.value.trim();
+  const username = form.elements.username.value.trim();
   const password = form.elements.password.value;
   const response = await fetch("/api/auth/register-email", {
     method: "POST",
     credentials: "include",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ email, username, password })
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -103,8 +104,10 @@ function showAppState() {
 function authErrorMessage(code, fallback) {
   const messages = {
     invalid_email: "请输入有效邮箱。",
+    invalid_username: "请输入有效用户名，不能包含空格或 @。",
     weak_password: "密码至少需要 8 位。",
-    email_already_registered: "该邮箱已注册，请直接登录。"
+    email_already_registered: "该邮箱已注册，请直接登录。",
+    username_already_registered: "该用户名已被使用，请换一个。"
   };
   return messages[code] ?? fallback;
 }

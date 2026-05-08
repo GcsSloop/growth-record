@@ -38,6 +38,23 @@ class FakeD1Database {
   }
 
   async first<T>(sql: string, bindings: unknown[]): Promise<T | null> {
+    if (sql.includes("COUNT(*) AS count FROM users WHERE date(last_login_at)")) {
+      const today = new Date().toISOString().slice(0, 10);
+      return {
+        count: [...this.users.values()].filter((user) => String(user.last_login_at ?? "").startsWith(today)).length
+      } as T;
+    }
+    if (sql.includes("COUNT(*) AS count FROM users")) {
+      return { count: this.users.size } as T;
+    }
+    if (sql.includes("COUNT(*) AS count FROM growth_records")) {
+      const minDate = new Date();
+      minDate.setUTCDate(minDate.getUTCDate() - 6);
+      const minDateText = minDate.toISOString().slice(0, 10);
+      return {
+        count: this.records.filter((record) => String(record.record_date) >= minDateText).length
+      } as T;
+    }
     if (sql.includes("SELECT id, email, phone, username, role, status, display_name, must_change_password")) {
       return (this.users.get(String(bindings[0])) as T) ?? null;
     }
@@ -716,6 +733,81 @@ describe("admin authentication bootstrap", () => {
     );
     expect(remove.status).toBe(200);
     expect(database.users.has(createPayload.data.user.id)).toBe(false);
+  });
+
+  it("returns admin dashboard metrics for users and recent activity", async () => {
+    const database = new FakeD1Database();
+    const { cookie, testEnv } = await loginAdmin(database);
+    database.users.set("active-user", {
+      id: "active-user",
+      email: "active@example.com",
+      username: "active",
+      role: "user",
+      status: "active",
+      display_name: "Active User",
+      must_change_password: false,
+      last_login_at: new Date().toISOString()
+    });
+    database.records.push(
+      {
+        id: "record-today",
+        user_id: "active-user",
+        record_date: new Date().toISOString().slice(0, 10),
+        dimension: "coding",
+        hours: 1,
+        description: "today",
+        exp: 10
+      },
+      {
+        id: "record-old",
+        user_id: "active-user",
+        record_date: "2000-01-01",
+        dimension: "coding",
+        hours: 1,
+        description: "old",
+        exp: 10
+      }
+    );
+
+    const metrics = await handleRequest(
+      new Request("https://example.com/api/admin/metrics", {
+        headers: { cookie }
+      }),
+      testEnv
+    );
+
+    expect(metrics.status).toBe(200);
+    await expect(json(metrics)).resolves.toMatchObject({
+      data: {
+        totalUsers: 2,
+        activeToday: 1,
+        weeklyRecords: 1
+      }
+    });
+  });
+
+  it("protects admin dashboard metrics from guests and normal users", async () => {
+    const database = new FakeD1Database();
+    const testEnv = env(database);
+
+    const guestMetrics = await handleRequest(new Request("https://example.com/api/admin/metrics"), testEnv);
+    expect(guestMetrics.status).toBe(401);
+
+    const register = await handleRequest(
+      new Request("https://example.com/api/auth/register-email", {
+        method: "POST",
+        body: JSON.stringify({ email: "metrics-user@example.com", password: "MetricUser123" })
+      }),
+      testEnv
+    );
+    const userCookie = register.headers.get("set-cookie")?.split(";")[0] ?? "";
+    const forbiddenMetrics = await handleRequest(
+      new Request("https://example.com/api/admin/metrics", {
+        headers: { cookie: userCookie }
+      }),
+      testEnv
+    );
+    expect(forbiddenMetrics.status).toBe(403);
   });
 
   it("requires admin-created users to change default password before normal use", async () => {

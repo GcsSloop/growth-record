@@ -316,6 +316,25 @@ export async function handleAdminListUsers(request: Request, env: Env): Promise<
   return json({ users: (result.results ?? []).map(publicUser) });
 }
 
+export async function handleAdminMetrics(request: Request, env: Env): Promise<Response> {
+  const admin = await requireAdmin(request, env);
+  if (admin instanceof Response) return admin;
+
+  const [totalUsers, activeToday, weeklyRecords] = await Promise.all([
+    env.DB.prepare("SELECT COUNT(*) AS count FROM users").first<{ count: number }>(),
+    env.DB.prepare("SELECT COUNT(*) AS count FROM users WHERE date(last_login_at) = date('now')").first<{ count: number }>(),
+    env.DB.prepare("SELECT COUNT(*) AS count FROM growth_records WHERE record_date >= date('now', '-6 days')").first<{
+      count: number;
+    }>()
+  ]);
+
+  return json({
+    totalUsers: totalUsers?.count ?? 0,
+    activeToday: activeToday?.count ?? 0,
+    weeklyRecords: weeklyRecords?.count ?? 0
+  });
+}
+
 export async function handleAdminCreateUser(request: Request, env: Env): Promise<Response> {
   const admin = await requireAdmin(request, env);
   if (admin instanceof Response) return admin;

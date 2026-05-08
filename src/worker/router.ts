@@ -4,6 +4,7 @@ import {
   handleAdminCreateUser,
   handleAdminDeleteUser,
   handleAdminListUsers,
+  handleAdminMetrics,
   handleAdminResetPassword,
   handleAdminResetUserPassword,
   handleAdminSetupPassword,
@@ -50,6 +51,10 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
 
   if (url.pathname === "/api/admin/users" && request.method === "GET") {
     return handleAdminListUsers(request, env);
+  }
+
+  if (url.pathname === "/api/admin/metrics" && request.method === "GET") {
+    return handleAdminMetrics(request, env);
   }
 
   if (url.pathname === "/api/admin/users" && request.method === "POST") {

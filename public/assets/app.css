@@ -62,13 +62,13 @@ body {
   color: var(--text-primary);
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   line-height: 1.6;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .shell {
-  width: 1600px;
+  width: min(1600px, 100%);
   max-width: 1600px;
-  min-width: 1600px;
+  min-width: 0;
   margin: 0 auto;
   padding: 0;
   display: flex;
@@ -1005,6 +1005,10 @@ th {
 }
 
 @media (max-width: 760px) {
+  body {
+    padding: 10px;
+  }
+
   .shell {
     padding: 12px;
   }

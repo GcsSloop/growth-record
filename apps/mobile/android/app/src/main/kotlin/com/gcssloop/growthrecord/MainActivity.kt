@@ -1,4 +1,4 @@
-package com.example.growth_record_mobile
+package com.gcssloop.growthrecord
 
 import io.flutter.embedding.android.FlutterActivity
 

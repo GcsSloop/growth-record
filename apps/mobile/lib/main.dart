@@ -208,6 +208,7 @@ class GrowthRecordWebView extends StatefulWidget {
 
 class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
   late final WebViewController controller;
+  String? loadError;
 
   @override
   void initState() {
@@ -216,6 +217,16 @@ class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
     controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xff0d0f1a))
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onWebResourceError: (error) {
+            if (!mounted) return;
+            setState(() {
+              loadError = '页面加载失败：${error.description}';
+            });
+          },
+        ),
+      )
       ..loadRequest(Uri.parse(webUrl));
   }
 
@@ -223,7 +234,30 @@ class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xff0d0f1a),
-      body: SafeArea(child: WebViewWidget(controller: controller)),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            WebViewWidget(controller: controller),
+            if (loadError != null)
+              Align(
+                alignment: Alignment.topCenter,
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xCC7F1D1D),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    loadError!,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

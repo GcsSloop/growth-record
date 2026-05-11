@@ -24,13 +24,44 @@ function replaceInFile(path, pattern, replacement) {
   writeFileSync(path, after);
 }
 
+function updateCargoPackageVersion(path, nextVersion) {
+  const before = readFileSync(path, "utf8");
+  const lines = before.split(/\r?\n/);
+  let inPackage = false;
+  let replaced = false;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      inPackage = trimmed === "[package]";
+      continue;
+    }
+
+    if (inPackage && /^\s*version\s*=/.test(line)) {
+      lines[index] = `version = "${nextVersion}"`;
+      replaced = true;
+      break;
+    }
+  }
+
+  if (!replaced) {
+    console.error(`No version field matched in ${path}`);
+    process.exit(1);
+  }
+
+  const eol = before.includes("\r\n") ? "\r\n" : "\n";
+  writeFileSync(path, `${lines.join(eol)}${eol}`);
+}
+
 updateJson("package.json", (json) => {
   json.version = version;
 });
 updateJson("apps/desktop/tauri.conf.json", (json) => {
   json.version = version;
 });
-replaceInFile("apps/desktop/Cargo.toml", /^version = ".+"$/m, `version = "${version}"`);
+updateCargoPackageVersion("apps/desktop/Cargo.toml", version);
 replaceInFile("apps/mobile/pubspec.yaml", /^version: .+$/m, `version: ${version}+1`);
 
 console.log(`Release version set to ${version}`);

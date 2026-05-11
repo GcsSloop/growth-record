@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.gcssloop.growthrecord",
   "build": {
-    "devUrl": "https://growth-record.gcssloop.workers.dev",
+    "devUrl": "https://growth.ai-gate.work",
     "frontendDist": "../../public"
   },
   "app": {
@@ -12,7 +12,7 @@
       {
         "label": "main",
         "title": "园中月努力可视化系统",
-        "url": "https://growth-record.gcssloop.workers.dev",
+        "url": "https://growth.ai-gate.work",
         "width": 1280,
         "height": 860,
         "minWidth": 390,

@@ -67,7 +67,7 @@ jobs:
 
       - name: Build Android APK
         working-directory: apps/mobile
-        run: flutter build apk --release --dart-define=GROWTH_RECORD_WEB_URL=${{ vars.GROWTH_RECORD_WEB_URL || 'https://growth-record.gcssloop.workers.dev' }}
+        run: flutter build apk --release --dart-define=GROWTH_RECORD_WEB_URL=${{ vars.GROWTH_RECORD_WEB_URL || 'https://growth.ai-gate.work' }}
 
       - name: Collect Android artifact
         run: node scripts/collect-release-artifacts.mjs "$GITHUB_REF_NAME" android
@@ -110,7 +110,7 @@ jobs:
 
       - name: Build iOS app without codesigning
         working-directory: apps/mobile
-        run: flutter build ios --release --no-codesign --dart-define=GROWTH_RECORD_WEB_URL=${{ vars.GROWTH_RECORD_WEB_URL || 'https://growth-record.gcssloop.workers.dev' }}
+        run: flutter build ios --release --no-codesign --dart-define=GROWTH_RECORD_WEB_URL=${{ vars.GROWTH_RECORD_WEB_URL || 'https://growth.ai-gate.work' }}
 
       - name: Collect iOS artifact
         run: node scripts/collect-release-artifacts.mjs "$GITHUB_REF_NAME" ios

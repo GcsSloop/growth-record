@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
 
-const String defaultWebUrl = 'https://growth-record.gcssloop.workers.dev';
+const String defaultWebUrl = 'https://growth.ai-gate.work';
 
 void main() {
   runApp(const GrowthRecordApp());

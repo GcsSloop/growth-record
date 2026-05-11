@@ -87,7 +87,7 @@ npx wrangler secret put ADMIN_RESET_KEY
 Then an operator with access to the deployment secret can clear the admin password state:
 
 ```bash
-curl -X POST https://growth-record.gcssloop.workers.dev/api/admin/reset-password \
+curl -X POST https://growth.ai-gate.work/api/admin/reset-password \
   -H "x-admin-reset-key: <ADMIN_RESET_KEY>"
 ```
 
@@ -194,7 +194,7 @@ Optional repository variable:
 GROWTH_RECORD_WEB_URL
 ```
 
-If `GROWTH_RECORD_WEB_URL` is not set, Flutter builds use `https://growth-record.gcssloop.workers.dev`.
+If `GROWTH_RECORD_WEB_URL` is not set, Flutter builds use `https://growth.ai-gate.work`.
 
 ## Repository Skills
 

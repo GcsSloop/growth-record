@@ -1,4 +1,6 @@
+﻿import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -16,7 +18,7 @@ class GrowthRecordApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '园中月努力可视化系统',
+      title: '成长记录系统',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -67,11 +69,14 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
         : {'account': accountController.text.trim(), 'password': passwordController.text};
 
     try {
-      final response = await http.post(
-        Uri.parse('$webUrl$endpoint'),
-        headers: {'content-type': 'application/json'},
-        body: jsonEncode(body),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$webUrl$endpoint'),
+            headers: {'content-type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 15));
+
       if (response.statusCode < 200 || response.statusCode >= 300) {
         setState(() {
           status = registering ? '注册失败，请检查邮箱和密码。' : '登录失败，请检查账号和密码。';
@@ -87,22 +92,36 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
         return;
       }
 
-      await WebViewCookieManager().setCookie(
-        WebViewCookie(
-          name: 'growth_session',
-          value: cookie,
-          domain: Uri.parse(webUrl).host,
-          path: '/',
-        ),
-      );
+      try {
+        await WebViewCookieManager()
+            .setCookie(
+              WebViewCookie(
+                name: 'growth_session',
+                value: cookie,
+                domain: Uri.parse(webUrl).host,
+                path: '/',
+              ),
+            )
+            .timeout(const Duration(seconds: 5));
+      } catch (_) {
+        // Cookie 写入失败时仍进入 WebView，避免原生页无穷转圈。
+      }
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(builder: (_) => const GrowthRecordWebView()),
       );
+    } on TimeoutException {
+      setState(() {
+        status = '请求或会话写入超时，请检查网络后重试。服务地址：$webUrl';
+      });
+    } on SocketException {
+      setState(() {
+        status = '网络连接失败，请检查网络或服务地址：$webUrl';
+      });
     } catch (_) {
       setState(() {
-        status = '网络连接失败，请稍后重试。';
+        status = '请求失败，请稍后重试。服务地址：$webUrl';
       });
     } finally {
       if (mounted) {
@@ -132,7 +151,7 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    '园中月努力可视化系统',
+                    '成长记录系统',
                     style: TextStyle(
                       color: Color(0xfff8d478),
                       fontSize: 26,

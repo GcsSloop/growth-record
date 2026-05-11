@@ -44,6 +44,7 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
   static const webUrl = String.fromEnvironment('GROWTH_RECORD_WEB_URL', defaultValue: defaultWebUrl);
   final accountController = TextEditingController();
   final emailController = TextEditingController();
+  final usernameController = TextEditingController();
   final passwordController = TextEditingController();
   bool registering = false;
   bool loading = false;
@@ -53,6 +54,7 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
   void dispose() {
     accountController.dispose();
     emailController.dispose();
+    usernameController.dispose();
     passwordController.dispose();
     super.dispose();
   }
@@ -64,8 +66,13 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
     });
 
     final endpoint = registering ? '/api/auth/register-email' : '/api/auth/login-password';
+    final registerUsername = usernameController.text.trim();
     final body = registering
-        ? {'email': emailController.text.trim(), 'password': passwordController.text}
+        ? {
+            'email': emailController.text.trim(),
+            'password': passwordController.text,
+            if (registerUsername.isNotEmpty) 'username': registerUsername,
+          }
         : {'account': accountController.text.trim(), 'password': passwordController.text};
 
     try {
@@ -78,8 +85,9 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
           .timeout(const Duration(seconds: 15));
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        final code = _extractErrorCode(response.body);
         setState(() {
-          status = registering ? '注册失败，请检查邮箱和密码。' : '登录失败，请检查账号和密码。';
+          status = _authErrorMessage(code, registering);
         });
         return;
       }
@@ -138,6 +146,36 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
     return match?.group(1);
   }
 
+  String? _extractErrorCode(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final error = decoded['error'];
+        if (error is Map<String, dynamic>) {
+          final code = error['code'];
+          if (code is String && code.isNotEmpty) return code;
+        }
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  String _authErrorMessage(String? code, bool isRegister) {
+    const codeMap = {
+      'invalid_email': '邮箱格式不正确。',
+      'weak_password': '密码至少 8 位。',
+      'email_already_registered': '该邮箱已注册，请直接登录。',
+      'username_already_registered': '用户名已被占用，请换一个用户名。',
+      'invalid_username': '用户名不合法，不能包含空格或 @。',
+      'invalid_credentials': '账号或密码错误。',
+      'unauthorized': '登录状态已失效，请重新登录。',
+    };
+    return codeMap[code] ??
+        (isRegister ? '注册失败，请检查邮箱、用户名和密码。' : '登录失败，请检查账号和密码。');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -190,6 +228,13 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.username],
                       decoration: const InputDecoration(labelText: '邮箱或用户名'),
+                    ),
+                  if (registering) const SizedBox(height: 12),
+                  if (registering)
+                    TextField(
+                      controller: usernameController,
+                      autofillHints: const [AutofillHints.username],
+                      decoration: const InputDecoration(labelText: '用户名（可选）'),
                     ),
                   const SizedBox(height: 12),
                   TextField(

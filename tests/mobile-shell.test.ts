@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+﻿import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -23,7 +23,7 @@ describe("Flutter mobile shell scaffold", () => {
 
     expect(main).toContain("GROWTH_RECORD_WEB_URL");
     expect(main).toContain("WebViewController");
-    expect(main).toContain("园中月努力可视化系统");
+    expect(main).toContain("成长记录系统");
   });
 
   it("enables Flutter lint rules", () => {

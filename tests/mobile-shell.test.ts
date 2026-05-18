@@ -22,7 +22,9 @@ describe("Flutter mobile shell scaffold", () => {
     const main = read("apps/mobile/lib/main.dart");
 
     expect(main).toContain("GROWTH_RECORD_WEB_URL");
+    expect(main).toContain("mobileAppPath = '/mobile.html'");
     expect(main).toContain("WebViewController");
+    expect(main).toContain("Uri.parse('$webUrl$mobileAppPath')");
     expect(main).toContain("成长记录系统");
   });
 

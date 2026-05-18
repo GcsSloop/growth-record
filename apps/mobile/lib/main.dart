@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
 
 const String defaultWebUrl = 'https://growth.ai-gate.work';
+const String mobileAppPath = '/mobile.html';
 
 void main() {
   runApp(const GrowthRecordApp());
@@ -291,7 +292,7 @@ class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(webUrl));
+      ..loadRequest(Uri.parse('$webUrl$mobileAppPath'));
   }
 
   @override

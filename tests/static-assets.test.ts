@@ -74,4 +74,17 @@ describe("static web assets", () => {
     expect(html).toContain("assets/app.css");
     expect(html).toContain("assets/admin.js");
   });
+
+  it("provides the mobile authenticated app shell", () => {
+    const html = readAsset("public/mobile.html");
+
+    expect(html).toContain("/api/dashboard");
+    expect(html).toContain("/api/records");
+    expect(html).toContain("/api/settings");
+    expect(html).toContain("syncDashboard");
+    expect(html).toContain("normalizeApiRecord");
+    expect(html).toContain("credentials: 'same-origin'");
+    expect(html).not.toContain("localStorage.setItem(STORAGE_KEY");
+    expect(html).not.toContain("localStorage.setItem(THEME_KEY");
+  });
 });

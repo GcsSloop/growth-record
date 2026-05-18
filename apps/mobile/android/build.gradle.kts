@@ -1,7 +1,5 @@
 allprojects {
     repositories {
-        maven("https://maven.aliyun.com/repository/google")
-        maven("https://maven.aliyun.com/repository/central")
         google()
         mavenCentral()
     }
@@ -10,8 +8,6 @@ allprojects {
 subprojects {
     buildscript {
         repositories {
-            maven("https://maven.aliyun.com/repository/google")
-            maven("https://maven.aliyun.com/repository/central")
             google()
             mavenCentral()
         }

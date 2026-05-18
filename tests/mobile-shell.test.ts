@@ -33,4 +33,15 @@ describe("Flutter mobile shell scaffold", () => {
 
     expect(analysisOptions).toContain("include: package:flutter_lints/flutter.yaml");
   });
+
+  it("uses stable Android Maven repositories for CI builds", () => {
+    const settingsGradle = read("apps/mobile/android/settings.gradle.kts");
+    const buildGradle = read("apps/mobile/android/build.gradle.kts");
+    const androidGradle = `${settingsGradle}\n${buildGradle}`;
+
+    expect(androidGradle).toContain("google()");
+    expect(androidGradle).toContain("mavenCentral()");
+    expect(androidGradle).toContain("gradlePluginPortal()");
+    expect(androidGradle).not.toContain("maven.aliyun.com");
+  });
 });

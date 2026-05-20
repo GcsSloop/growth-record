@@ -318,6 +318,9 @@ function fakeResult(): D1Result {
 
 function env(db = new FakeD1Database(), overrides: Partial<Env> = {}): Env {
   return {
+    ASSETS: {
+      fetch: async () => new Response("asset")
+    } as unknown as Fetcher,
     DB: db as unknown as D1Database,
     SESSION_SECRET: "test-secret",
     ADMIN_RESET_KEY: "reset-key",

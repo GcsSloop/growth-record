@@ -1,4 +1,5 @@
 export interface Env {
+  ASSETS: Fetcher;
   DB: D1Database;
   SESSION_SECRET?: string;
   SMS_PROVIDER?: string;

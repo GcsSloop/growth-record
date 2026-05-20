@@ -132,5 +132,5 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     return notFound();
   }
 
-  return apiError("asset_not_found", "Static asset fallback is handled by Cloudflare assets.", 404);
+  return env.ASSETS.fetch(request);
 }

@@ -3,6 +3,9 @@ import worker from "../src/worker/index";
 import type { Env } from "../src/worker/types";
 
 const env = {
+  ASSETS: {
+    fetch: async () => new Response("asset")
+  } as unknown as Fetcher,
   DB: {} as D1Database
 } satisfies Env;
 

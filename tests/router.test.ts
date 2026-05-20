@@ -3,6 +3,9 @@ import { handleRequest } from "../src/worker/router";
 import type { Env } from "../src/worker/types";
 
 const env = {
+  ASSETS: {
+    fetch: async (request: Request) => new Response(`asset:${new URL(request.url).pathname}`)
+  } as unknown as Fetcher,
   DB: {} as D1Database
 } satisfies Env;
 
@@ -44,15 +47,10 @@ describe("Worker router", () => {
     });
   });
 
-  it("returns a clear response for non-API fallback routes", async () => {
-    const response = await handleRequest(new Request("https://example.com/dashboard"), env);
+  it("delegates non-API fallback routes to Cloudflare assets", async () => {
+    const response = await handleRequest(new Request("https://example.com/mobile.html"), env);
 
-    expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toEqual({
-      error: {
-        code: "asset_not_found",
-        message: "Static asset fallback is handled by Cloudflare assets."
-      }
-    });
+    expect(response.status).toBe(200);
+    await expect(response.text()).resolves.toBe("asset:/mobile.html");
   });
 });

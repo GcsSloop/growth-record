@@ -22,12 +22,10 @@ describe("Flutter mobile shell scaffold", () => {
     const main = read("apps/mobile/lib/main.dart");
 
     expect(main).toContain("GROWTH_RECORD_WEB_URL");
-    expect(main).toContain("mobileViewportScript");
+    expect(main).toContain("mobileAppPath = '/mobile.html'");
     expect(main).toContain("WebViewController");
-    expect(main).toContain("runJavaScript(mobileViewportScript)");
-    expect(main).toContain("Uri.parse(webUrl)");
-    expect(main).not.toContain("mobileAppPath");
-    expect(main).not.toContain("/mobile.html");
+    expect(main).toContain("Uri.parse('$webUrl$mobileAppPath')");
+    expect(main).not.toContain("mobileViewportScript");
     expect(main).toContain("成长记录系统");
   });
 

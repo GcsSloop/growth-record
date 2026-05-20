@@ -7,7 +7,112 @@ import 'package:http/http.dart' as http;
 import 'package:webview_flutter/webview_flutter.dart';
 
 const String defaultWebUrl = 'https://growth.ai-gate.work';
-const String mobileAppPath = '/mobile.html';
+const String mobileViewportScript = '''
+(function () {
+  if (document.getElementById('growth-record-mobile-webview-style')) return;
+  document.documentElement.classList.add('growth-record-mobile-webview');
+  document.body.classList.add('growth-record-mobile-webview');
+  var style = document.createElement('style');
+  style.id = 'growth-record-mobile-webview-style';
+  style.textContent = `
+    html.growth-record-mobile-webview,
+    body.growth-record-mobile-webview {
+      width: 100% !important;
+      min-width: 0 !important;
+      overflow-x: hidden !important;
+      background: #0d0f1a !important;
+    }
+    body.growth-record-mobile-webview {
+      padding: 12px !important;
+    }
+    .growth-record-mobile-webview .shell {
+      width: 100% !important;
+      max-width: none !important;
+      min-width: 0 !important;
+      min-height: calc(100vh - 24px) !important;
+      gap: 12px !important;
+    }
+    .growth-record-mobile-webview .topbar {
+      align-items: flex-start !important;
+      border-radius: 16px !important;
+      padding: 14px !important;
+      gap: 12px !important;
+    }
+    .growth-record-mobile-webview .header-title {
+      font-size: 1.05rem !important;
+      line-height: 1.25 !important;
+    }
+    .growth-record-mobile-webview .actions {
+      width: 100% !important;
+      justify-content: flex-start !important;
+    }
+    .growth-record-mobile-webview .bento-grid,
+    .growth-record-mobile-webview .dashboard-grid,
+    .growth-record-mobile-webview .admin-grid,
+    .growth-record-mobile-webview .auth-gate {
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) !important;
+      gap: 12px !important;
+      width: 100% !important;
+      margin-top: 12px !important;
+    }
+    .growth-record-mobile-webview .bento-col-left,
+    .growth-record-mobile-webview .bento-col-middle,
+    .growth-record-mobile-webview .bento-col-right {
+      width: 100% !important;
+      min-width: 0 !important;
+      gap: 12px !important;
+    }
+    .growth-record-mobile-webview .card,
+    .growth-record-mobile-webview .metric-card,
+    .growth-record-mobile-webview .auth-gate > div,
+    .growth-record-mobile-webview .login-panel {
+      width: 100% !important;
+      min-width: 0 !important;
+      border-radius: 16px !important;
+      padding: 14px !important;
+    }
+    .growth-record-mobile-webview .checkin-grid,
+    .growth-record-mobile-webview .growth-grid,
+    .growth-record-mobile-webview .settings-dim-row,
+    .growth-record-mobile-webview .settings-quote-row,
+    .growth-record-mobile-webview .settings-inline-3,
+    .growth-record-mobile-webview .inline-fields {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+    .growth-record-mobile-webview canvas {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+    .growth-record-mobile-webview .record-table-wrap {
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+    .growth-record-mobile-webview .record-table {
+      min-width: 760px !important;
+    }
+    .growth-record-mobile-webview .modal-overlay {
+      padding: 12px !important;
+      align-items: start !important;
+    }
+    .growth-record-mobile-webview .modal {
+      width: 100% !important;
+      max-height: calc(100vh - 24px) !important;
+      border-radius: 16px !important;
+      padding: 16px !important;
+    }
+    .growth-record-mobile-webview .toast-container {
+      left: 12px !important;
+      right: 12px !important;
+      top: 76px !important;
+    }
+    .growth-record-mobile-webview .toast {
+      max-width: none !important;
+    }
+  `;
+  document.head.appendChild(style);
+})();
+''';
 
 void main() {
   runApp(const GrowthRecordApp());
@@ -290,9 +395,12 @@ class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
               loadError = '页面加载失败：${error.description}';
             });
           },
+          onPageFinished: (_) async {
+            await controller.runJavaScript(mobileViewportScript);
+          },
         ),
       )
-      ..loadRequest(Uri.parse('$webUrl$mobileAppPath'));
+      ..loadRequest(Uri.parse(webUrl));
   }
 
   @override

@@ -87,4 +87,11 @@ describe("static web assets", () => {
     expect(html).not.toContain("localStorage.setItem(STORAGE_KEY");
     expect(html).not.toContain("localStorage.setItem(THEME_KEY");
   });
+
+  it("uses a Wrangler-compatible Node version for Worker deploys", () => {
+    const workflow = readAsset(".github/workflows/deploy-worker.yml");
+
+    expect(workflow).toContain('node-version: "22"');
+    expect(workflow).toContain("npx wrangler deploy");
+  });
 });

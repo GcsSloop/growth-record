@@ -14,7 +14,11 @@ describe("Flutter mobile shell scaffold", () => {
 
     expect(pubspec).toContain("name: growth_record_mobile");
     expect(pubspec).toContain('sdk: ">=3.8.0 <4.0.0"');
+    expect(pubspec).toContain("file_selector: ^1.1.0");
+    expect(pubspec).toContain("flutter_secure_storage: ^9.2.4");
+    expect(pubspec).toContain("path_provider: ^2.1.5");
     expect(pubspec).toContain("webview_flutter: ^4.13.1");
+    expect(pubspec).toContain("webview_flutter_android: ^4.12.0");
     expect(pubspec).toContain("flutter_lints: ^6.0.0");
   });
 
@@ -25,6 +29,18 @@ describe("Flutter mobile shell scaffold", () => {
     expect(main).toContain("mobileAppPath = '/mobile.html'");
     expect(main).toContain("WebViewController");
     expect(main).toContain("Uri.parse('$webUrl$mobileAppPath')");
+    expect(main).toContain("FlutterSecureStorage");
+    expect(main).toContain("AndroidWebViewController");
+    expect(main).toContain("setOnShowFileSelector");
+    expect(main).toContain("openFile");
+    expect(main).toContain("openFiles");
+    expect(main).toContain("BackupBridge");
+    expect(main).toContain("GrowthRecordBackups");
+    expect(main).toContain("getApplicationDocumentsDirectory");
+    expect(main).toContain("secureStorage.read");
+    expect(main).toContain("secureStorage.write");
+    expect(main).toContain("savedAccountKey");
+    expect(main).toContain("savedPasswordKey");
     expect(main).not.toContain("mobileViewportScript");
     expect(main).toContain("成长记录系统");
   });

@@ -2,8 +2,12 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 const String defaultWebUrl = 'https://growth.ai-gate.work';
@@ -43,6 +47,9 @@ class NativeAuthGate extends StatefulWidget {
 
 class _NativeAuthGateState extends State<NativeAuthGate> {
   static const webUrl = String.fromEnvironment('GROWTH_RECORD_WEB_URL', defaultValue: defaultWebUrl);
+  static const savedAccountKey = 'growth_record_saved_account';
+  static const savedPasswordKey = 'growth_record_saved_password';
+  static const secureStorage = FlutterSecureStorage();
   final accountController = TextEditingController();
   final emailController = TextEditingController();
   final usernameController = TextEditingController();
@@ -50,6 +57,12 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
   bool registering = false;
   bool loading = false;
   String status = '';
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadSavedCredentials());
+  }
 
   @override
   void dispose() {
@@ -60,6 +73,19 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
     super.dispose();
   }
 
+  Future<void> _loadSavedCredentials() async {
+    final savedAccount = await secureStorage.read(key: savedAccountKey);
+    final savedPassword = await secureStorage.read(key: savedPasswordKey);
+    if (!mounted) return;
+    accountController.text = savedAccount ?? '';
+    passwordController.text = savedPassword ?? '';
+  }
+
+  Future<void> _saveCredentials(String account, String password) async {
+    await secureStorage.write(key: savedAccountKey, value: account);
+    await secureStorage.write(key: savedPasswordKey, value: password);
+  }
+
   Future<void> submit() async {
     setState(() {
       loading = true;
@@ -68,13 +94,14 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
 
     final endpoint = registering ? '/api/auth/register-email' : '/api/auth/login-password';
     final registerUsername = usernameController.text.trim();
+    final loginAccount = accountController.text.trim();
     final body = registering
         ? {
             'email': emailController.text.trim(),
             'password': passwordController.text,
             if (registerUsername.isNotEmpty) 'username': registerUsername,
           }
-        : {'account': accountController.text.trim(), 'password': passwordController.text};
+        : {'account': loginAccount, 'password': passwordController.text};
 
     try {
       final response = await http
@@ -114,6 +141,10 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
             .timeout(const Duration(seconds: 5));
       } catch (_) {
         // Cookie 写入失败时仍进入 WebView，避免原生页无穷转圈。
+      }
+
+      if (!registering) {
+        await _saveCredentials(loginAccount, passwordController.text);
       }
 
       if (!mounted) return;
@@ -282,6 +313,12 @@ class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
     controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setBackgroundColor(const Color(0xff0d0f1a))
+      ..addJavaScriptChannel(
+        'BackupBridge',
+        onMessageReceived: (message) {
+          unawaited(_saveBackupFromWeb(message.message));
+        },
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
           onWebResourceError: (error) {
@@ -293,6 +330,57 @@ class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
         ),
       )
       ..loadRequest(Uri.parse('$webUrl$mobileAppPath'));
+    _configureAndroidFilePicker();
+  }
+
+  void _configureAndroidFilePicker() {
+    if (controller.platform is! AndroidWebViewController) return;
+    final androidController = controller.platform as AndroidWebViewController;
+    androidController.setOnShowFileSelector((params) async {
+      final acceptedTypeGroups = _acceptedTypeGroups(params.acceptTypes);
+      if (params.mode == FileSelectorMode.openMultiple) {
+        final files = await openFiles(acceptedTypeGroups: acceptedTypeGroups);
+        return files.map((file) => file.path).toList();
+      }
+      final file = await openFile(acceptedTypeGroups: acceptedTypeGroups);
+      return file == null ? <String>[] : <String>[file.path];
+    });
+  }
+
+  List<XTypeGroup> _acceptedTypeGroups(List<String> acceptTypes) {
+    final normalized = acceptTypes.map((type) => type.trim()).where((type) => type.isNotEmpty).toList();
+    if (normalized.isEmpty) {
+      return const [XTypeGroup(label: 'Images', mimeTypes: ['image/*'])];
+    }
+    final mimeTypes = normalized.where((type) => !type.startsWith('.')).toList();
+    final extensions = normalized
+        .where((type) => type.startsWith('.') && type.length > 1)
+        .map((type) => type.substring(1))
+        .toList();
+    return [XTypeGroup(label: 'Selected files', mimeTypes: mimeTypes, extensions: extensions)];
+  }
+
+  Future<void> _saveBackupFromWeb(String message) async {
+    try {
+      final decoded = jsonDecode(message);
+      if (decoded is! Map<String, dynamic>) return;
+      final fileName = _safeBackupFileName(decoded['fileName']);
+      final content = decoded['content'];
+      if (content is! String || content.isEmpty) return;
+      final docs = await getApplicationDocumentsDirectory();
+      final dir = Directory('${docs.path}${Platform.pathSeparator}GrowthRecordBackups');
+      if (!await dir.exists()) await dir.create(recursive: true);
+      final file = File('${dir.path}${Platform.pathSeparator}$fileName');
+      await file.writeAsString(content);
+    } catch (_) {
+      // Web fallback download remains available when native backup writing fails.
+    }
+  }
+
+  String _safeBackupFileName(Object? fileName) {
+    final raw = fileName is String && fileName.trim().isNotEmpty ? fileName.trim() : 'growth_record_backup.json';
+    final sanitized = raw.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    return sanitized.endsWith('.json') ? sanitized : '$sanitized.json';
   }
 
   @override

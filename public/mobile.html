@@ -2854,11 +2854,12 @@
             border-width: 3px;
         }
 
-        body.mobile-preview .avatar-settings-actions {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            align-items: center;
+        body.mobile-preview #profileAvatar {
+            cursor: pointer;
+        }
+
+        body.mobile-preview #profileAvatar:active {
+            transform: scale(0.98);
         }
 
         @supports not (background: color-mix(in srgb, black, white)) {
@@ -3557,6 +3558,210 @@
                 height: 96px !important;
             }
         }
+
+
+        /* 2026-05-21 Android UI refinements */
+        body.mobile-preview .header {
+            position: relative !important;
+            top: auto !important;
+            z-index: 1 !important;
+            margin-top: 0 !important;
+        }
+
+        body.mobile-preview .app-container {
+            padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+        }
+
+        body.mobile-preview .settings-list-row,
+        body.mobile-preview .settings-dim-row {
+            display: grid !important;
+            grid-template-columns: minmax(0, 1fr) 34px !important;
+            gap: 8px !important;
+            align-items: center !important;
+            padding: 8px !important;
+            border: 1px solid var(--border-subtle) !important;
+            border-radius: 12px !important;
+            background: var(--bg-secondary) !important;
+        }
+
+        body.mobile-preview .settings-dim-row {
+            grid-template-columns: minmax(0, 1fr) 72px !important;
+        }
+
+        body.mobile-preview .settings-dim-row input,
+        body.mobile-preview .settings-list-row input {
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 34px !important;
+            height: 34px !important;
+        }
+
+        body.mobile-preview .settings-list-row.two-inputs {
+            grid-template-columns: 96px minmax(0, 1fr) 34px !important;
+        }
+
+        body.mobile-preview .settings-dim-row .settings-exp-input {
+            width: 72px !important;
+            min-width: 72px !important;
+            max-width: 72px !important;
+            grid-column: auto !important;
+            justify-self: end !important;
+            text-align: center !important;
+            font-variant-numeric: tabular-nums;
+        }
+
+        body.mobile-preview .settings-date-input {
+            width: 96px !important;
+            min-width: 96px !important;
+            max-width: 96px !important;
+            font-size: 0.76rem !important;
+            padding-inline: 7px !important;
+        }
+
+        body.mobile-preview .settings-add-row.quote-add {
+            grid-template-columns: 96px minmax(0, 1fr) 42px !important;
+        }
+
+        body.mobile-preview .settings-add-row.quote-add input[type="date"] {
+            width: 96px !important;
+            min-width: 96px !important;
+            font-size: 0.76rem !important;
+            padding-inline: 7px !important;
+        }
+
+        body.mobile-preview .settings-add-row.quote-add .settings-date-input {
+            width: 96px !important;
+            min-width: 96px !important;
+            max-width: 96px !important;
+            font-size: 0.76rem !important;
+            padding-inline: 7px !important;
+        }
+
+        body.mobile-preview .settings-data-actions {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px !important;
+            margin-top: 8px !important;
+        }
+
+        body.mobile-preview .settings-data-actions .btn {
+            width: 100%;
+            min-height: 34px;
+            justify-content: center;
+            border-radius: 10px;
+            font-size: 0.78rem;
+        }
+
+        body.mobile-preview .app-dialog-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 120;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.68);
+            backdrop-filter: blur(10px);
+        }
+
+        body.mobile-preview .app-dialog {
+            width: min(100%, 380px);
+            border: 1px solid var(--border-active);
+            border-radius: 18px;
+            padding: 14px;
+            background: var(--bg-card);
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.52);
+            color: var(--text-primary);
+        }
+
+        body.mobile-preview .app-dialog h3 {
+            margin: 0 0 6px;
+            color: var(--gold-bright);
+            font-size: 0.98rem;
+        }
+
+        body.mobile-preview .app-dialog p {
+            margin: 0 0 12px;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            line-height: 1.55;
+        }
+
+        body.mobile-preview .app-dialog-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        body.mobile-preview .app-date-dialog {
+            display: grid;
+            gap: 9px;
+        }
+
+        body.mobile-preview .app-date-dialog-head {
+            display: grid;
+            grid-template-columns: 30px 1fr 30px;
+            align-items: center;
+            gap: 6px;
+        }
+
+        body.mobile-preview .app-date-dialog-title {
+            text-align: center;
+            color: var(--gold-bright);
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+        }
+
+        body.mobile-preview .app-date-dialog-grid,
+        body.mobile-preview .app-date-dialog-week {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+
+        body.mobile-preview .app-date-dialog-week span {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.68rem;
+        }
+
+        body.mobile-preview .app-date-day {
+            min-height: 30px;
+            border: 1px solid var(--border-subtle);
+            border-radius: 9px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            font-size: 0.74rem;
+        }
+
+        body.mobile-preview .app-date-day.is-selected {
+            border-color: var(--gold-bright);
+            background: rgba(212, 175, 55, 0.18);
+            color: var(--gold-bright);
+            font-weight: 700;
+        }
+
+        body.mobile-preview .app-date-day.is-empty {
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        body.mobile-preview .app-date-nav {
+            min-height: 30px;
+            border: 1px solid var(--border-subtle);
+            border-radius: 9px;
+            background: var(--bg-secondary);
+            color: var(--gold-bright);
+        }
+
+        body.mobile-preview input[type="date"] {
+            color-scheme: dark;
+        }
+
+        body.mobile-preview.light-theme input[type="date"] {
+            color-scheme: light;
+        }
     </style>
 </head>
 
@@ -3570,6 +3775,7 @@
                         <span class="profile-avatar-placeholder">月</span>
                     </div>
                 </div>
+                <input type="file" id="avatarImageInput" accept="image/*" style="display:none;">
                 <h1 class="header-title" id="headerTitleDisplay">✨ 园中月努力可视化系统</h1>
                 <p class="header-subtitle" id="headerSubtitleDisplay"
                     style="font-size:0.8rem; color:var(--text-secondary);">自由才是我永恒的向往</p>
@@ -3759,7 +3965,6 @@
 
     <div class="modal-overlay" id="settingsModalOverlay" style="display:none;">
         <div class="modal" style="max-width:600px;">
-            <h3>个人设置</h3>
             <div class="settings-section">
                 <h4>系统标题</h4>
                 <div class="avatar-settings-row">
@@ -3768,11 +3973,6 @@
                             <img id="settingsAvatarPreviewImg" alt="头像预览">
                             <span class="profile-avatar-placeholder">月</span>
                         </div>
-                    </div>
-                    <div class="avatar-settings-actions">
-                        <label class="btn btn-outline btn-sm" for="settingsAvatarInput">更换头像</label>
-                        <button class="btn btn-outline btn-sm" type="button" onclick="clearAvatarImage()">清除头像</button>
-                        <input type="file" id="settingsAvatarInput" accept="image/*" style="display:none;">
                     </div>
                     <div class="theme-settings-row">
                         <span>显示模式</span>
@@ -3795,7 +3995,7 @@
             <div class="settings-section">
                 <h4>碎碎念</h4>
                 <div id="settingsQuoteList" style="display:flex;flex-direction:column;gap:8px;"></div>
-                <div class="settings-add-row quote-add" style="display:flex;gap:8px;margin-top:8px;"><input type="date" id="settingsNewQuoteDate"><input
+                <div class="settings-add-row quote-add" style="display:flex;gap:8px;margin-top:8px;"><input class="settings-date-input" type="text" readonly inputmode="none" id="settingsNewQuoteDate" onclick="openAppDatePicker('settingsNewQuoteDate')"><input
                         type="text" id="settingsNewQuoteText" placeholder="新感想..."><button class="btn btn-xs save"
                         onclick="settingsAddQuote()" style="padding:4px 10px; font-size:0.7rem;">+</button></div>
             </div>
@@ -3804,25 +4004,11 @@
                 <div id="settingsDimList" style="display:flex;flex-direction:column;gap:8px;"></div>
             </div>
             <div class="settings-section">
-                <h4>自动备份（每1小时）</h4>
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-                    <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--text-secondary);cursor:pointer;">
-                        <input type="checkbox" id="settingsAutoBackupEnabled" style="width:16px;height:16px;">
-                        启用每小时自动备份
-                    </label>
-                    <button class="btn btn-outline btn-sm" onclick="settingsPickBackupFolder()">选择备份目录</button>
-                    <button class="btn btn-outline btn-sm" onclick="settingsRunBackupNow()">立即备份</button>
+                <h4>数据管理</h4>
+                <div class="settings-data-actions">
+                    <button class="btn btn-outline btn-sm" onclick="settingsExportData()">导出</button>
+                    <button class="btn btn-sm btn-danger-outline" onclick="settingsResetAllData()">重置</button>
                 </div>
-                <div id="settingsBackupStatus" style="font-size:0.75rem;color:var(--text-muted);line-height:1.5;">
-                    建议目录：系统盘用户文档下的“可视化系统自动备份”
-                </div>
-            </div>
-            <div class="settings-divider"></div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:16px;">
-                <span style="font-size:0.8rem; font-weight:600; color:var(--text-secondary);">数据管理</span>
-                <button class="btn btn-outline btn-sm" onclick="settingsExportData()">导出</button>
-                <button class="btn btn-outline btn-sm" onclick="settingsImportData()">导入</button>
-                <button class="btn btn-sm btn-danger-outline" onclick="settingsResetAllData()">重置</button>
             </div>
             <div class="form-actions">
                 <button class="btn-cancel" onclick="closeSettingsModal()">取消</button>
@@ -3854,9 +4040,7 @@
             const CURRENT_YEAR = TODAY.getFullYear();
             const CURRENT_MONTH = TODAY.getMonth();
             const DAYS_IN_MONTH = new Date(CURRENT_YEAR, CURRENT_MONTH + 1, 0).getDate();
-            const AUTO_BACKUP_INTERVAL_MS = 60 * 60 * 1000;
-            let autoBackupTimer = null;
-            let backupDirHandle = null;
+            const DEFAULT_BACKUP_DIR_NAME = 'GrowthRecordBackups';
 
             function getThemeColors() {
                 const isLight = document.body.classList.contains('light-theme');
@@ -3892,7 +4076,6 @@
                     dimensions: [...DEFAULT_DIMENSIONS],
                     descriptions: { ...DEFAULT_DESCRIPTIONS },
                     dimensionLevelExp: getDefaultDimensionLevelExp(),
-                    autoBackupEnabled: false,
                     avatarImage: '',
                     goals: [...getDefaultData().goals],
                     quotes: [...getDefaultData().quotes]
@@ -3908,7 +4091,6 @@
             function saveLocalPrefs(settings) {
                 try {
                     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-                        autoBackupEnabled: !!settings.autoBackupEnabled,
                         avatarImage: settings.avatarImage || ''
                     }));
                 } catch (e) { showToast('\u672c\u5730\u504f\u597d\u4fdd\u5b58\u5931\u8d25', 'warning'); }
@@ -3939,7 +4121,6 @@
                     goals: Array.isArray(payload.goals) ? payload.goals : defaults.goals,
                     quotes: Array.isArray(payload.quotes) ? payload.quotes : defaults.quotes,
                     theme: payload.theme === 'light' ? 'light' : 'dark',
-                    autoBackupEnabled: typeof localPrefs.autoBackupEnabled === 'boolean' ? localPrefs.autoBackupEnabled : false,
                     avatarImage: typeof localPrefs.avatarImage === 'string' ? localPrefs.avatarImage : ''
                 };
             }
@@ -3948,9 +4129,8 @@
                 if (!appData.goals || !Array.isArray(appData.goals)) appData.goals = [...appSettings.goals];
                 if (!appData.quotes || !Array.isArray(appData.quotes)) appData.quotes = [...appSettings.quotes];
                 if (!appSettings.dimensionLevelExp || typeof appSettings.dimensionLevelExp !== 'object') appSettings.dimensionLevelExp = getDefaultDimensionLevelExp();
-                if (typeof appSettings.autoBackupEnabled !== 'boolean') appSettings.autoBackupEnabled = false;
                 if (typeof appSettings.avatarImage !== 'string') appSettings.avatarImage = '';
-                if (appSettings.theme !== 'light') appSettings.theme = 'dark';
+                appSettings.theme = appSettings.theme === 'light' ? 'light' : 'dark';
                 getDimensions().forEach(d => { if (!appSettings.dimensionLevelExp[d] || appSettings.dimensionLevelExp[d] <= 0) appSettings.dimensionLevelExp[d] = EXP_PER_LEVEL; });
             }
             function applyServerState(payload) {
@@ -3994,7 +4174,6 @@
                     initTheme();
                     applySettingsToUI();
                     renderSettingsPage();
-                    startAutoBackupTimer();
                     refreshAllUI();
                     if (!options.silent) showToast('\u6570\u636e\u5df2\u540c\u6b65', 'success');
                 } catch (e) {
@@ -4003,7 +4182,7 @@
             }
             async function saveServerSettings() {
                 const settings = await apiRequest('/api/settings', { method: 'PUT', body: JSON.stringify(toSettingsPayload()) });
-                appSettings = { ...appSettings, ...settings, autoBackupEnabled: appSettings.autoBackupEnabled, avatarImage: appSettings.avatarImage };
+                appSettings = { ...appSettings, ...settings, theme: appSettings.theme === 'light' ? 'light' : 'dark', avatarImage: appSettings.avatarImage };
                 saveLocalPrefs(appSettings);
                 return settings;
             }
@@ -4048,6 +4227,73 @@
             function calcCheckinExp(hours) { let exp = Math.round(hours * EXP_PER_HOUR); if (hours >= 4) exp = Math.round(exp * 1.2); else if (hours >= 2.5) exp = Math.round(exp * 1.1); return exp; }
             function getRecordDatesSet() { const s = new Set(); appData.records.forEach(r => s.add(r.date)); return s; }
             function showToast(msg, type = 'info') { const c = document.getElementById('toastContainer'); const t = document.createElement('div'); t.className = `toast ${type}`; t.textContent = msg; c.appendChild(t); setTimeout(() => { if (t.parentNode) t.remove(); }, 3000); }
+
+            function showAppDialog({ title, message, confirmText = '确定', cancelText = '取消', danger = false }) {
+                return new Promise(resolve => {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'app-dialog-overlay';
+                    overlay.innerHTML = '<div class="app-dialog"><h3>' + escapeHtml(title) + '</h3><p>' + escapeHtml(message) + '</p><div class="app-dialog-actions"><button class="btn-cancel" type="button" data-dialog-cancel>' + escapeHtml(cancelText) + '</button><button class="btn ' + (danger ? 'btn-danger-outline' : 'btn-primary') + '" type="button" data-dialog-confirm>' + escapeHtml(confirmText) + '</button></div></div>';
+                    const close = (value) => { overlay.remove(); resolve(value); };
+                    overlay.addEventListener('click', e => { if (e.target === overlay) close(false); });
+                    overlay.querySelector('[data-dialog-cancel]').addEventListener('click', () => close(false));
+                    overlay.querySelector('[data-dialog-confirm]').addEventListener('click', () => close(true));
+                    document.body.appendChild(overlay);
+                });
+            }
+
+            function parseDateParts(value) {
+                const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (!match) return parseDateParts(TODAY_STR);
+                return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
+            }
+
+            function openAppDatePicker(inputId) {
+                const input = document.getElementById(inputId);
+                if (!input) return;
+                const selected = parseDateParts(input.value || TODAY_STR);
+                let viewYear = selected.year;
+                let viewMonth = selected.month - 1;
+                const overlay = document.createElement('div');
+                overlay.className = 'app-dialog-overlay';
+                overlay.innerHTML = '<div class="app-dialog app-date-dialog"><div class="app-date-dialog-head"><button class="app-date-nav" type="button" data-date-prev>‹</button><div class="app-date-dialog-title" data-date-title></div><button class="app-date-nav" type="button" data-date-next>›</button></div><div class="app-date-dialog-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div><div class="app-date-dialog-grid" data-date-grid></div><div class="app-dialog-actions"><button class="btn-cancel" type="button" data-dialog-cancel>取消</button><button class="btn btn-primary" type="button" data-date-today>今天</button></div></div>';
+                const close = () => overlay.remove();
+                const setValue = (year, monthIndex, day) => {
+                    input.value = formatDate(new Date(year, monthIndex, day));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                    close();
+                };
+                const render = () => {
+                    overlay.querySelector('[data-date-title]').textContent = viewYear + '年' + String(viewMonth + 1).padStart(2, '0') + '月';
+                    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+                    const days = new Date(viewYear, viewMonth + 1, 0).getDate();
+                    const cells = [];
+                    for (let i = 0; i < firstDay; i++) cells.push('<button class="app-date-day is-empty" type="button" tabindex="-1"></button>');
+                    for (let day = 1; day <= days; day++) {
+                        const active = viewYear === selected.year && viewMonth === selected.month - 1 && day === selected.day;
+                        cells.push('<button class="app-date-day' + (active ? ' is-selected' : '') + '" type="button" data-date-day="' + day + '">' + day + '</button>');
+                    }
+                    overlay.querySelector('[data-date-grid]').innerHTML = cells.join('');
+                    overlay.querySelectorAll('[data-date-day]').forEach(btn => btn.addEventListener('click', () => setValue(viewYear, viewMonth, Number(btn.dataset.dateDay))));
+                };
+                overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+                overlay.querySelector('[data-dialog-cancel]').addEventListener('click', close);
+                overlay.querySelector('[data-date-today]').addEventListener('click', () => {
+                    const now = new Date();
+                    setValue(now.getFullYear(), now.getMonth(), now.getDate());
+                });
+                overlay.querySelector('[data-date-prev]').addEventListener('click', () => {
+                    viewMonth -= 1;
+                    if (viewMonth < 0) { viewMonth = 11; viewYear -= 1; }
+                    render();
+                });
+                overlay.querySelector('[data-date-next]').addEventListener('click', () => {
+                    viewMonth += 1;
+                    if (viewMonth > 11) { viewMonth = 0; viewYear += 1; }
+                    render();
+                });
+                document.body.appendChild(overlay);
+                render();
+            }
 
             function openCheckinModal() {
                 document.getElementById('checkinDate').value = TODAY_STR;
@@ -4146,7 +4392,7 @@
             }
 
             async function deleteRecord(rid) {
-                if (!confirm('\u786e\u5b9a\u5220\u9664\u8fd9\u6761\u8bb0\u5f55\u5417\uff1f')) return;
+                if (!await showAppDialog({ title: '删除记录', message: '确定删除这条记录吗？删除后网页端也会同步更新。', confirmText: '删除', danger: true })) return;
                 try {
                     await apiRequest('/api/records/' + encodeURIComponent(rid), { method: 'DELETE' });
                     await syncDashboard({ silent: true });
@@ -4154,21 +4400,14 @@
                 } catch (e) { showToast('\u5220\u9664\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5', 'warning'); }
             }
             function exportData() {
-                const blob = new Blob([JSON.stringify({ ...appData, settings: appSettings }, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'fengdingdang_backup_' + TODAY_STR + '.json';
-                a.click();
-                URL.revokeObjectURL(url);
-                showToast('数据已导出', 'success');
-            }
-            function importDataPrompt() {
-                showToast('\u4e3a\u4fdd\u6301\u624b\u673a\u7aef\u548c\u7f51\u9875\u7aef\u6570\u636e\u4e00\u81f4\uff0c\u6682\u4e0d\u652f\u6301\u4ece\u624b\u673a\u7aef\u8986\u76d6\u5bfc\u5165\u6570\u636e', 'warning');
+                const content = buildBackupPayload();
+                const fileName = buildBackupFileName();
+                const savedToNative = saveBackupWithNativeBridge(content, fileName);
+                if (!savedToNative) downloadBackupFile(content, fileName);
+                showToast(savedToNative ? '已导出到默认目录：' + DEFAULT_BACKUP_DIR_NAME : '已导出到浏览器下载目录', 'success');
             }
             async function resetAllData() {
-                if (!confirm('\u786e\u5b9a\u6e05\u7a7a\u6240\u6709\u6253\u5361\u8bb0\u5f55\u5417\uff1f')) return;
-                if (!confirm('\u6b64\u64cd\u4f5c\u4f1a\u5220\u9664\u670d\u52a1\u5668\u4e2d\u7684\u8bb0\u5f55\uff0c\u7f51\u9875\u7aef\u4e5f\u4f1a\u540c\u6b65\u6e05\u7a7a\u3002\u662f\u5426\u7ee7\u7eed\uff1f')) return;
+                if (!await showAppDialog({ title: '重置数据', message: '此操作会删除服务器中的全部打卡记录，网页端也会同步清空。是否继续？', confirmText: '重置', danger: true })) return;
                 try {
                     const ids = appData.records.map(r => r.id);
                     for (const id of ids) await apiRequest('/api/records/' + encodeURIComponent(id), { method: 'DELETE' });
@@ -4180,7 +4419,6 @@
             }
 
             function settingsExportData() { closeSettingsModal(); setTimeout(exportData, 150); }
-            function settingsImportData() { closeSettingsModal(); setTimeout(importDataPrompt, 150); }
             function settingsResetAllData() { closeSettingsModal(); setTimeout(resetAllData, 150); }
             function renderCalendar() {
                 const tbody = document.getElementById('calendarBody');
@@ -4545,17 +4783,21 @@
                 if (settingsBtn) settingsBtn.textContent = isLight ? '切换深色' : '切换浅色';
             }
             async function toggleTheme() {
-                const body = document.body;
-                appSettings.theme = body.classList.contains('light-theme') ? 'dark' : 'light';
+                appSettings.theme = document.body.classList.contains('light-theme') ? 'dark' : 'light';
                 initTheme();
                 setTimeout(() => { drawRadarChart(); drawBarChart7(); drawLineChartMonth(); drawPieChartDim(); }, 350);
                 try { await saveServerSettings(); }
-                catch (e) { showToast('\u4e3b\u9898\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5', 'warning'); }
+                catch (e) { }
             }
             function initTheme() {
-                if (appSettings.theme === 'light') document.body.classList.add('light-theme');
-                else document.body.classList.remove('light-theme');
+                appSettings.theme = appSettings.theme === 'light' ? 'light' : 'dark';
+                document.body.classList.toggle('light-theme', appSettings.theme === 'light');
                 syncThemeToggleLabels();
+            }
+
+            function initSettingsNewQuoteDate() {
+                const input = document.getElementById('settingsNewQuoteDate');
+                if (input && !input.value) input.value = TODAY_STR;
             }
 
             function openSettingsModal() {
@@ -4564,10 +4806,7 @@
                 renderSettingsGoalList();
                 renderSettingsQuoteList();
                 renderSettingsDimList();
-                const autoBackupBox = document.getElementById('settingsAutoBackupEnabled');
-                if (autoBackupBox) autoBackupBox.checked = !!appSettings.autoBackupEnabled;
-                if (autoBackupBox) autoBackupBox.onchange = function () { toggleAutoBackupEnabled(this.checked); };
-                setBackupStatus(appSettings.autoBackupEnabled ? '自动备份已开启（每1小时执行）' : '自动备份已关闭');
+                initSettingsNewQuoteDate();
                 document.getElementById('settingsModalOverlay').style.display = 'flex';
             }
             function renderSettingsPage() {
@@ -4578,10 +4817,7 @@
                 renderSettingsGoalList();
                 renderSettingsQuoteList();
                 renderSettingsDimList();
-                const autoBackupBox = document.getElementById('settingsAutoBackupEnabled');
-                if (autoBackupBox) autoBackupBox.checked = !!appSettings.autoBackupEnabled;
-                if (autoBackupBox) autoBackupBox.onchange = function () { toggleAutoBackupEnabled(this.checked); };
-                setBackupStatus(appSettings.autoBackupEnabled ? '自动备份已开启（每1小时执行）' : '自动备份已关闭');
+                initSettingsNewQuoteDate();
                 applyAvatarImage();
             }
             function mountSettingsPage() {
@@ -4599,12 +4835,12 @@
             function updateSettingsGoal(i, val) { appSettings.goals[i] = val; }
             function deleteSettingsGoal(i) { appSettings.goals.splice(i, 1); renderSettingsGoalList(); }
             function settingsAddGoal() { const inp = document.getElementById('settingsNewGoal'); if (inp.value.trim()) { appSettings.goals.push(inp.value.trim()); inp.value = ''; renderSettingsGoalList(); } }
-            function renderSettingsQuoteList() { const container = document.getElementById('settingsQuoteList'); const quotes = appSettings.quotes || []; container.innerHTML = quotes.map((q, i) => `<div class="settings-list-row two-inputs"><input class="settings-input" type="date" value="${q.date}" onchange="updateSettingsQuoteDate(${i},this.value)"><input class="settings-input" value="${escapeHtml(q.text)}" onchange="updateSettingsQuoteText(${i},this.value)"><button class="settings-delete-btn" title="删除" aria-label="删除" onclick="deleteSettingsQuote(${i})">🗑</button></div>`).join(''); }
+            function renderSettingsQuoteList() { const container = document.getElementById('settingsQuoteList'); const quotes = appSettings.quotes || []; container.innerHTML = quotes.map((q, i) => `<div class="settings-list-row two-inputs"><input class="settings-input settings-date-input" type="text" readonly inputmode="none" id="settingsQuoteDate${i}" value="${q.date}" onclick="openAppDatePicker('settingsQuoteDate${i}')" onchange="updateSettingsQuoteDate(${i},this.value)"><input class="settings-input" value="${escapeHtml(q.text)}" onchange="updateSettingsQuoteText(${i},this.value)"><button class="settings-delete-btn" title="删除" aria-label="删除" onclick="deleteSettingsQuote(${i})">🗑</button></div>`).join(''); }
             function updateSettingsQuoteDate(i, val) { appSettings.quotes[i].date = val; }
             function updateSettingsQuoteText(i, val) { appSettings.quotes[i].text = val; }
             function deleteSettingsQuote(i) { appSettings.quotes.splice(i, 1); renderSettingsQuoteList(); }
-            function settingsAddQuote() { const dinp = document.getElementById('settingsNewQuoteDate'); const tinp = document.getElementById('settingsNewQuoteText'); if (tinp.value.trim()) { appSettings.quotes.push({ id: 'q' + Date.now(), date: dinp.value, text: tinp.value.trim() }); dinp.value = TODAY_STR; tinp.value = ''; renderSettingsQuoteList(); } }
-            function renderSettingsDimList() { const container = document.getElementById('settingsDimList'); const dims = appSettings.dimensions || DEFAULT_DIMENSIONS; const descs = appSettings.descriptions || DEFAULT_DESCRIPTIONS; container.innerHTML = dims.map((d, i) => `<div class="settings-dim-row"><input value="${escapeHtml(d)}" placeholder="维度名称" onchange="updateSettingsDim(${i},this.value)" style="flex:1.2;"><input type="number" min="1" step="1" value="${getDimensionLevelExp(d)}" placeholder="每级经验" onchange="updateSettingsDimLevelExp('${escapeHtml(d)}',this.value)" style="width:110px;flex:0 0 110px;"><input value="${escapeHtml(descs[d] || '')}" placeholder="描述" onchange="updateSettingsDesc('${escapeHtml(d)}',this.value)" style="flex:2;"></div>`).join(''); }
+            function settingsAddQuote() { const dinp = document.getElementById('settingsNewQuoteDate'); const tinp = document.getElementById('settingsNewQuoteText'); if (tinp.value.trim()) { appSettings.quotes.push({ id: 'q' + Date.now(), date: dinp.value || TODAY_STR, text: tinp.value.trim() }); dinp.value = TODAY_STR; tinp.value = ''; renderSettingsQuoteList(); } }
+            function renderSettingsDimList() { const container = document.getElementById('settingsDimList'); const dims = appSettings.dimensions || DEFAULT_DIMENSIONS; container.innerHTML = dims.map((d, i) => `<div class="settings-dim-row"><input class="settings-input" value="${escapeHtml(d)}" placeholder="维度名称" onchange="updateSettingsDim(${i},this.value)"><input class="settings-input settings-exp-input" type="text" inputmode="numeric" maxlength="3" value="${getDimensionLevelExp(d)}" placeholder="经验" onchange="updateSettingsDimLevelExp('${escapeHtml(d)}',this.value)"></div>`).join(''); }
             function updateSettingsDim(i, val) {
                 const oldName = appSettings.dimensions[i];
                 const newName = (val || '').trim();
@@ -4623,9 +4859,11 @@
             function updateSettingsDesc(dimKey, val) { if (!appSettings.descriptions) appSettings.descriptions = {}; appSettings.descriptions[dimKey] = val; }
             function updateSettingsDimLevelExp(dimKey, val) { if (!appSettings.dimensionLevelExp) appSettings.dimensionLevelExp = {}; const parsed = Number(val); appSettings.dimensionLevelExp[dimKey] = Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : EXP_PER_LEVEL; }
             function setupAvatarInput() {
-                const input = document.getElementById('settingsAvatarInput');
+                const avatar = document.getElementById('profileAvatar');
+                const input = document.getElementById('avatarImageInput');
                 if (!input || input.dataset.bound === '1') return;
                 input.dataset.bound = '1';
+                if (avatar) avatar.addEventListener('click', () => input.click());
                 input.addEventListener('change', function (e) {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
@@ -4641,22 +4879,13 @@
                     input.value = '';
                 });
             }
-            function clearAvatarImage() {
-                appSettings.avatarImage = '';
-                saveSettingsData(appSettings);
-                applyAvatarImage();
-                showToast('头像已清除', 'info');
-            }
             async function saveSettings() {
                 appSettings.title = document.getElementById('settingsTitle').value.trim() || '\u2728 \u56ed\u4e2d\u6708\u52aa\u529b\u53ef\u89c6\u5316\u7cfb\u7edf';
                 appSettings.subtitle = document.getElementById('settingsSubtitle').value.trim() || '\u81ea\u7531\u624d\u662f\u6211\u6c38\u6052\u7684\u5411\u5f80';
                 appData.goals = [...appSettings.goals];
                 appData.quotes = [...appSettings.quotes];
-                const autoBackupBox = document.getElementById('settingsAutoBackupEnabled');
-                if (autoBackupBox) appSettings.autoBackupEnabled = !!autoBackupBox.checked;
                 try {
                     await saveServerSettings();
-                    startAutoBackupTimer();
                     await syncDashboard({ silent: true });
                     closeSettingsModal();
                     showToast('\u8bbe\u7f6e\u5df2\u4fdd\u5b58', 'success');
@@ -4679,21 +4908,6 @@
                     .replace(/^_+|_+$/g, '') || 'auto_backup';
                 return `${safeTitle}_auto_backup.json`;
             }
-            async function writeBackupToPickedFolder(content, filename) {
-                if (!backupDirHandle) return false;
-                try {
-                    if (backupDirHandle.queryPermission) {
-                        let p = await backupDirHandle.queryPermission({ mode: 'readwrite' });
-                        if (p !== 'granted' && backupDirHandle.requestPermission) p = await backupDirHandle.requestPermission({ mode: 'readwrite' });
-                        if (p !== 'granted') return false;
-                    }
-                    const fileHandle = await backupDirHandle.getFileHandle(filename, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(content);
-                    await writable.close();
-                    return true;
-                } catch (e) { return false; }
-            }
             function downloadBackupFile(content, filename) {
                 const blob = new Blob([content], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -4703,43 +4917,14 @@
                 a.click();
                 URL.revokeObjectURL(url);
             }
-            function setBackupStatus(text) { const el = document.getElementById('settingsBackupStatus'); if (el) el.textContent = text; }
-            async function runAutoBackup(trigger = 'auto') {
-                const content = buildBackupPayload();
-                const fileName = buildBackupFileName();
-                const savedToFolder = await writeBackupToPickedFolder(content, fileName);
-                if (!savedToFolder) downloadBackupFile(content, fileName);
-                const placeText = savedToFolder ? '已保存到已选目录' : '已通过浏览器下载';
-                const when = new Date().toLocaleString();
-                setBackupStatus('最近备份：' + when + '，' + placeText);
-                if (trigger === 'manual') showToast('备份已完成', 'success');
-            }
-            function stopAutoBackupTimer() { if (autoBackupTimer) { clearInterval(autoBackupTimer); autoBackupTimer = null; } }
-            function startAutoBackupTimer() {
-                stopAutoBackupTimer();
-                if (!appSettings.autoBackupEnabled) return;
-                autoBackupTimer = setInterval(() => { runAutoBackup('auto'); }, AUTO_BACKUP_INTERVAL_MS);
-            }
-            async function settingsPickBackupFolder() {
-                if (!window.showDirectoryPicker) {
-                    setBackupStatus('当前浏览器不支持选择备份目录，将使用下载方式备份。');
-                    showToast('浏览器不支持目录选择', 'warning');
-                    return;
-                }
+            function saveBackupWithNativeBridge(content, filename) {
+                if (!window.BackupBridge || !window.BackupBridge.postMessage) return false;
                 try {
-                    backupDirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-                    const pickedName = backupDirHandle?.name || '已选目录';
-                    setBackupStatus('备份目录已设置：' + pickedName);
-                    showToast('备份目录已设置', 'success');
+                    window.BackupBridge.postMessage(JSON.stringify({ fileName: filename, content }));
+                    return true;
                 } catch (e) {
-                    setBackupStatus('未选择备份目录');
+                    return false;
                 }
-            }
-            function settingsRunBackupNow() { runAutoBackup('manual'); }
-            function toggleAutoBackupEnabled(checked) {
-                appSettings.autoBackupEnabled = !!checked;
-                startAutoBackupTimer();
-                setBackupStatus(appSettings.autoBackupEnabled ? '自动备份已开启（每1小时执行）' : '自动备份已关闭');
             }
             function refreshMobileOverview(totalExp, level, remaining) {
                 const todayRecords = appData.records.filter(r => r.date === TODAY_STR);
@@ -4822,31 +5007,28 @@
                     const pct = calcDimensionPct(name, dimExp);
                     const perLevel = getDimensionLevelExp(name);
                     const cc = pct >= 60 ? 'high' : (pct >= 30 ? 'medium' : (pct >= 10 ? 'low' : 'very-low'));
-                    return `<div class="growth-item"><div class="growth-top"><span class="growth-name">${name}</span><span class="growth-lv">LV.${lv}</span></div><div class="growth-bar-outer"><div class="growth-bar-inner ${cc}" style="width:${pct}%;"></div></div><div class="growth-stats"><span>${prog}/${perLevel}</span><span>${pct}%</span></div><div class="growth-desc">?? ${descs[name] || ''}</div></div>`;
+                    return `<div class="growth-item"><div class="growth-top"><span class="growth-name">${name}</span><span class="growth-lv">LV.${lv}</span></div><div class="growth-bar-outer"><div class="growth-bar-inner ${cc}" style="width:${pct}%;"></div></div><div class="growth-stats"><span>${prog}/${perLevel}</span><span>${pct}%</span></div><div class="growth-desc">说明：${descs[name] || ''}</div></div>`;
                 }).join('');
             }
             // 暴露到window
             window.openCheckinModal = openCheckinModal; window.closeCheckinModal = closeCheckinModal; window.updateExpPreview = updateExpPreview; window.submitCheckin = submitCheckin;
             window.openArchiveModal = openArchiveModal; window.closeArchiveModal = closeArchiveModal; window.previewArchiveDate = previewArchiveDate; window.jumpToArchiveDate = jumpToArchiveDate; window.showAllRecords = showAllRecords;
-            window.exportData = exportData; window.importDataPrompt = importDataPrompt; window.resetAllData = resetAllData; window.deleteRecord = deleteRecord; window.selectCalendarDate = selectCalendarDate;
+            window.exportData = exportData; window.resetAllData = resetAllData; window.deleteRecord = deleteRecord; window.selectCalendarDate = selectCalendarDate;
             window.toggleTheme = toggleTheme; window.openSettingsModal = openSettingsModal; window.closeSettingsModal = closeSettingsModal;
             window.switchMobileTab = switchMobileTab;
             window.openSettingsFromNav = openSettingsFromNav;
             window.updateSettingsGoal = updateSettingsGoal; window.deleteSettingsGoal = deleteSettingsGoal; window.settingsAddGoal = settingsAddGoal;
             window.updateSettingsQuoteDate = updateSettingsQuoteDate; window.updateSettingsQuoteText = updateSettingsQuoteText; window.deleteSettingsQuote = deleteSettingsQuote; window.settingsAddQuote = settingsAddQuote;
+            window.openAppDatePicker = openAppDatePicker;
             window.updateSettingsDim = updateSettingsDim; window.updateSettingsDesc = updateSettingsDesc; window.updateSettingsDimLevelExp = updateSettingsDimLevelExp; window.saveSettings = saveSettings;
-            window.clearAvatarImage = clearAvatarImage;
             window.updateInlineExpPreview = updateInlineExpPreview;
             window.submitInlineCheckin = submitInlineCheckin;
             // 设置中的数据管理包装函数
-            window.settingsExportData = settingsExportData; window.settingsImportData = settingsImportData; window.settingsResetAllData = settingsResetAllData;
-            window.settingsPickBackupFolder = settingsPickBackupFolder;
-            window.settingsRunBackupNow = settingsRunBackupNow;
+            window.settingsExportData = settingsExportData; window.settingsResetAllData = settingsResetAllData;
 
             window.currentFilterDate = null;
             initTheme(); applySettingsToUI();
             mountSettingsPage();
-            startAutoBackupTimer();
             document.getElementById('archiveDate').addEventListener('click', function (e) {
                 if (typeof this.showPicker === 'function') { try { this.showPicker(); } catch (err) { } }
                 e.stopPropagation();

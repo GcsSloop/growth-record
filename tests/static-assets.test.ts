@@ -98,7 +98,13 @@ describe("static web assets", () => {
     expect(html).toContain("settingsResetAllData");
     expect(html).toContain('id="avatarImageInput"');
     expect(html).toContain("avatar.addEventListener('click', () => input.click())");
+    expect(html).toContain('id="themeToggleBtn"');
+    expect(html).toContain("const headerBtn = document.getElementById('themeToggleBtn')");
     expect(html).not.toContain("settingsAvatarInput");
+    expect(html).not.toContain("settingsAvatarPreview");
+    expect(html).not.toContain("settingsThemeToggleBtn");
+    expect(html).not.toContain("avatar-settings-row");
+    expect(html).not.toContain("settings-avatar-preview");
     expect(html).not.toContain("clearAvatarImage");
     expect(html).not.toContain("更换头像");
     expect(html).not.toContain("清除头像");

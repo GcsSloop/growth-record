@@ -2835,25 +2835,6 @@
             margin-bottom: 14px;
         }
 
-        body.mobile-preview .avatar-settings-row {
-            display: grid;
-            grid-template-columns: 72px minmax(0, 1fr);
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        body.mobile-preview .settings-avatar-preview {
-            width: 64px;
-            height: 64px;
-            grid-row: auto;
-            padding: 5px;
-        }
-
-        body.mobile-preview .settings-avatar-preview .profile-avatar-inner {
-            border-width: 3px;
-        }
-
         body.mobile-preview #profileAvatar {
             cursor: pointer;
         }
@@ -3967,18 +3948,6 @@
         <div class="modal" style="max-width:600px;">
             <div class="settings-section">
                 <h4>系统标题</h4>
-                <div class="avatar-settings-row">
-                    <div class="profile-avatar settings-avatar-preview" id="settingsAvatarPreview">
-                        <div class="profile-avatar-inner">
-                            <img id="settingsAvatarPreviewImg" alt="头像预览">
-                            <span class="profile-avatar-placeholder">月</span>
-                        </div>
-                    </div>
-                    <div class="theme-settings-row">
-                        <span>显示模式</span>
-                        <button class="btn btn-outline btn-sm" type="button" id="settingsThemeToggleBtn" onclick="toggleTheme()">切换浅色</button>
-                    </div>
-                </div>
                 <div class="form-group"><label>主标题</label><input type="text" id="settingsTitle"
                         placeholder="园中月努力可视化系统"></div>
                 <div class="form-group"><label>副标题</label><input type="text" id="settingsSubtitle"
@@ -4199,8 +4168,7 @@
 
             function applyAvatarImage() {
                 const pairs = [
-                    { wrap: document.getElementById('profileAvatar'), img: document.getElementById('profileAvatarImg') },
-                    { wrap: document.getElementById('settingsAvatarPreview'), img: document.getElementById('settingsAvatarPreviewImg') }
+                    { wrap: document.getElementById('profileAvatar'), img: document.getElementById('profileAvatarImg') }
                 ];
                 pairs.forEach(({ wrap, img }) => {
                     if (!wrap || !img) return;
@@ -4778,9 +4746,7 @@
             function syncThemeToggleLabels() {
                 const isLight = document.body.classList.contains('light-theme');
                 const headerBtn = document.getElementById('themeToggleBtn');
-                const settingsBtn = document.getElementById('settingsThemeToggleBtn');
                 if (headerBtn) headerBtn.textContent = isLight ? '☀' : '☾';
-                if (settingsBtn) settingsBtn.textContent = isLight ? '切换深色' : '切换浅色';
             }
             async function toggleTheme() {
                 appSettings.theme = document.body.classList.contains('light-theme') ? 'dark' : 'light';

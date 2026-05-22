@@ -576,6 +576,36 @@
             background: var(--accent-blue-bg);
         }
 
+        .calendar-header {
+            justify-content: space-between;
+        }
+
+        .calendar-month-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .calendar-nav-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            line-height: 1;
+        }
+
+        .calendar-nav-btn:hover {
+            border-color: var(--gold);
+            color: var(--gold-bright);
+        }
+
         .record-card {
             display: flex;
             flex-direction: column;
@@ -2619,12 +2649,22 @@
             position: sticky;
             top: 14px;
             z-index: 70;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: start;
             margin: 0 0 12px;
             padding: 16px;
             border: 1px solid var(--border-subtle);
             border-radius: 22px;
             background: var(--bg-card);
             box-shadow: var(--shadow-card);
+        }
+
+        body.mobile-preview .header-actions {
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding-top: 2px;
         }
 
         body.mobile-preview .header-title {
@@ -2805,9 +2845,22 @@
 
         body.mobile-preview .settings-add-row .btn {
             min-height: 34px;
-            height: 34px;
+            min-width: 42px;
+            height: 38px;
             padding: 0 !important;
-            border-radius: 10px !important;
+            border-radius: 12px !important;
+            font-size: 1.05rem !important;
+            line-height: 1 !important;
+            border: 1px solid var(--accent-green) !important;
+            background: var(--bg-card) !important;
+            color: var(--accent-green) !important;
+            box-shadow: none !important;
+        }
+
+        body.mobile-preview .settings-add-row .btn:hover {
+            border-color: var(--accent-green) !important;
+            background: var(--bg-card) !important;
+            transform: none !important;
         }
 
         body.mobile-preview .settings-card .form-group {
@@ -3750,11 +3803,13 @@
                     style="font-size:0.8rem; color:var(--text-secondary);">自由才是我永恒的向往</p>
                 <div class="mobile-hero-meta" id="mobileHeroMeta">加载中...</div>
             </div>
+            <div class="header-actions">
+                <button class="btn-theme" id="themeToggleBtn" onclick="toggleTheme()" title="切换主题">☾</button>
+            </div>
             <div class="action-bar">
                 <button class="btn btn-primary" onclick="openCheckinModal()">打卡</button>
                 <button class="btn btn-outline" onclick="openArchiveModal()">存档</button>
                 <button class="btn btn-outline btn-sm" onclick="switchMobileTab('settings')">设置</button>
-                <button class="btn-theme" id="themeToggleBtn" onclick="toggleTheme()" title="切换主题">☾</button>
             </div>
         </header>
 
@@ -3798,7 +3853,7 @@
                 <div class="card checkin-form-card">
                     <div class="card-header"><span class="icon-dot green"></span> 添加今日打卡记录</div>
                     <div class="inline-checkin-form">
-                        <div class="form-group"><label>日期</label><input type="date" id="inlineCheckinDate"></div>
+                        <div class="form-group"><label>日期</label><input class="settings-date-input" type="text" readonly inputmode="none" id="inlineCheckinDate" onclick="openAppDatePicker('inlineCheckinDate')"></div>
                         <div class="form-group"><label>维度</label><select id="inlineCheckinDimension"></select></div>
                         <div class="form-group"><label>时长（小时）</label><input type="number" id="inlineCheckinHours" value="1" min="0.5" max="12" step="0.5" oninput="updateInlineExpPreview()"></div>
                         <div class="form-group inline-checkin-desc"><label>描述</label><input type="text" id="inlineCheckinDesc" placeholder="如：代码优化、内容创作..."></div>
@@ -3844,8 +3899,13 @@
 
             <div class="bento-col-right">
                 <div class="card calendar-card">
-                    <div class="card-header"><span class="icon-dot gold"></span> <span
-                            id="calendarMonthTitle">加载中...</span></div>
+                    <div class="card-header calendar-header"><span class="icon-dot gold"></span>
+                        <div class="calendar-month-nav">
+                            <button class="calendar-nav-btn" type="button" onclick="shiftCalendarMonth(-1)" aria-label="上一月">‹</button>
+                            <span id="calendarMonthTitle">加载中...</span>
+                            <button class="calendar-nav-btn" type="button" onclick="shiftCalendarMonth(1)" aria-label="下一月">›</button>
+                        </div>
+                    </div>
                     <table class="calendar-table">
                         <thead>
                             <tr>
@@ -3946,7 +4006,7 @@
                 <div id="settingsGoalList" style="display:flex;flex-direction:column;gap:8px;"></div>
                 <div class="settings-add-row" style="display:flex;gap:8px;margin-top:8px;"><input type="text" id="settingsNewGoal"
                         placeholder="新目标..."><button class="btn btn-xs save" onclick="settingsAddGoal()"
-                        style="padding:4px 10px; font-size:0.7rem; border-radius:10px; border:1px solid rgba(74,222,128,0.3); color:var(--accent-green); background:transparent;">+</button>
+                        style="padding:4px 10px;">+</button>
                 </div>
             </div>
             <div class="settings-section">
@@ -3954,7 +4014,7 @@
                 <div id="settingsQuoteList" style="display:flex;flex-direction:column;gap:8px;"></div>
                 <div class="settings-add-row quote-add" style="display:flex;gap:8px;margin-top:8px;"><input class="settings-date-input" type="text" readonly inputmode="none" id="settingsNewQuoteDate" onclick="openAppDatePicker('settingsNewQuoteDate')"><input
                         type="text" id="settingsNewQuoteText" placeholder="新感想..."><button class="btn btn-xs save"
-                        onclick="settingsAddQuote()" style="padding:4px 10px; font-size:0.7rem;">+</button></div>
+                        onclick="settingsAddQuote()" style="padding:4px 10px;">+</button></div>
             </div>
             <div class="settings-section">
                 <h4>维度自定义</h4>
@@ -3997,6 +4057,9 @@
             const CURRENT_YEAR = TODAY.getFullYear();
             const CURRENT_MONTH = TODAY.getMonth();
             const DAYS_IN_MONTH = new Date(CURRENT_YEAR, CURRENT_MONTH + 1, 0).getDate();
+            let calendarViewYear = CURRENT_YEAR;
+            let calendarViewMonth = CURRENT_MONTH;
+            let selectedCalendarDate = null;
             const DEFAULT_BACKUP_DIR_NAME = 'GrowthRecordBackups';
 
             function getThemeColors() {
@@ -4332,18 +4395,25 @@
                 const date = document.getElementById('archiveDate').value;
                 if (!date) { showToast('请选择日期', 'warning'); return; }
                 window.currentFilterDate = date;
+                selectedCalendarDate = date;
+                syncCalendarViewToDate(date);
                 closeArchiveModal();
                 switchMobileTab('records');
                 refreshRecordTable(date);
                 document.getElementById('recordFilterLabel').textContent = '筛选：' + date;
+                renderCalendar();
+                refreshTrendCharts();
                 showToast('已筛选 ' + date, 'info');
             }
             function showAllRecords() {
                 window.currentFilterDate = null;
+                selectedCalendarDate = null;
                 closeArchiveModal();
                 switchMobileTab('records');
                 refreshRecordTable(null);
                 document.getElementById('recordFilterLabel').textContent = '全部';
+                renderCalendar();
+                refreshTrendCharts();
                 showToast('已显示全部记录', 'info');
             }
 
@@ -4368,6 +4438,7 @@
                     const ids = appData.records.map(r => r.id);
                     for (const id of ids) await apiRequest('/api/records/' + encodeURIComponent(id), { method: 'DELETE' });
                     window.currentFilterDate = null;
+                    selectedCalendarDate = null;
                     document.getElementById('recordFilterLabel').textContent = '\u5168\u90e8';
                     await syncDashboard({ silent: true });
                     showToast('\u6570\u636e\u5df2\u91cd\u7f6e', 'info');
@@ -4376,29 +4447,48 @@
 
             function settingsExportData() { closeSettingsModal(); setTimeout(exportData, 150); }
             function settingsResetAllData() { closeSettingsModal(); setTimeout(resetAllData, 150); }
+            function syncCalendarViewToDate(dateStr) {
+                const parts = parseDateParts(dateStr || TODAY_STR);
+                calendarViewYear = parts.year;
+                calendarViewMonth = parts.month - 1;
+            }
+            function refreshTrendCharts() {
+                drawBarChart7();
+                drawLineChartMonth();
+                drawPieChartDim();
+            }
+            function shiftCalendarMonth(delta) {
+                const next = new Date(calendarViewYear, calendarViewMonth + delta, 1);
+                calendarViewYear = next.getFullYear();
+                calendarViewMonth = next.getMonth();
+                renderCalendar();
+                refreshTrendCharts();
+            }
             function renderCalendar() {
                 const tbody = document.getElementById('calendarBody');
                 const recordDates = getRecordDatesSet();
-                const firstDay = new Date(CURRENT_YEAR, CURRENT_MONTH, 1).getDay();
+                const firstDay = new Date(calendarViewYear, calendarViewMonth, 1).getDay();
+                const daysInViewMonth = new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate();
                 const todayNum = TODAY.getDate();
-                const selDate = window.currentFilterDate;
+                const selDate = selectedCalendarDate || window.currentFilterDate;
                 let rows = [], dayNum = 1;
-                const total = Math.ceil((firstDay + DAYS_IN_MONTH) / 7) * 7;
+                const total = Math.ceil((firstDay + daysInViewMonth) / 7) * 7;
                 for (let c = 0; c < total; c++) {
                     if (c % 7 === 0) rows.push([]);
                     const ri = Math.floor(c / 7);
-                    if (c < firstDay || dayNum > DAYS_IN_MONTH) rows[ri].push({ num: null, empty: true, dateStr: null });
+                    if (c < firstDay || dayNum > daysInViewMonth) rows[ri].push({ num: null, empty: true, dateStr: null });
                     else {
-                        const m = String(CURRENT_MONTH + 1).padStart(2, '0');
+                        const m = String(calendarViewMonth + 1).padStart(2, '0');
                         const d = String(dayNum).padStart(2, '0');
-                        rows[ri].push({ num: dayNum, empty: false, dateStr: `${CURRENT_YEAR}-${m}-${d}` });
+                        rows[ri].push({ num: dayNum, empty: false, dateStr: `${calendarViewYear}-${m}-${d}` });
                         dayNum++;
                     }
                 }
+                document.getElementById('calendarMonthTitle').textContent = `${calendarViewYear}年${calendarViewMonth + 1}月`;
                 tbody.innerHTML = rows.map(row => `<tr>${row.map(cell => {
                     if (cell.empty) return '<td class="empty">?</td>';
                     let cls = '';
-                    if (cell.num === todayNum && CURRENT_MONTH === TODAY.getMonth() && CURRENT_YEAR === TODAY.getFullYear()) cls += ' today';
+                    if (cell.num === todayNum && calendarViewMonth === TODAY.getMonth() && calendarViewYear === TODAY.getFullYear()) cls += ' today';
                     if (recordDates.has(cell.dateStr)) cls += ' has-record';
                     if (selDate && cell.dateStr === selDate) cls += ' selected-date';
                     return `<td class="${cls.trim()}" onclick="selectCalendarDate('${cell.dateStr}')">${cell.num}</td>`;
@@ -4407,14 +4497,18 @@
             function selectCalendarDate(ds) {
                 if (window.currentFilterDate === ds) {
                     window.currentFilterDate = null;
+                    selectedCalendarDate = null;
                     document.getElementById('recordFilterLabel').textContent = '全部';
                     refreshRecordTable(null);
                 } else {
                     window.currentFilterDate = ds;
+                    selectedCalendarDate = ds;
+                    syncCalendarViewToDate(ds);
                     document.getElementById('recordFilterLabel').textContent = '筛选：' + ds;
                     refreshRecordTable(ds);
                 }
                 renderCalendar();
+                refreshTrendCharts();
                 document.getElementById('calendarDateInfo').textContent = window.currentFilterDate ? '已筛选：' + window.currentFilterDate : '点击日期筛选记录';
             }
             function refreshRecordTable(fd) {
@@ -4447,6 +4541,12 @@
             }
             function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+            function getTrendAnchorDate() {
+                return selectedCalendarDate || window.currentFilterDate || TODAY_STR;
+            }
+            function getTrendAnchorParts() {
+                return parseDateParts(getTrendAnchorDate());
+            }
             function drawRadarChart() {
                 const canvas = document.getElementById('radarCanvas');
                 const ctx = canvas.getContext('2d');
@@ -4510,8 +4610,10 @@
 
                 const colors = getThemeColors();
                 const days = [];
+                const anchor = parseDateParts(getTrendAnchorDate());
+                const anchorDate = new Date(anchor.year, anchor.month - 1, anchor.day);
                 for (let i = 6; i >= 0; i--) {
-                    const d = new Date(TODAY);
+                    const d = new Date(anchorDate);
                     d.setDate(d.getDate() - i);
                     days.push({ label: (d.getMonth() + 1) + '/' + d.getDate(), dateStr: formatDate(d), exp: 0 });
                 }
@@ -4576,9 +4678,11 @@
 
                 const colors = getThemeColors();
                 const pts = [];
+                const anchor = getTrendAnchorParts();
                 let cum = 0;
-                for (let d = 1; d <= DAYS_IN_MONTH; d++) {
-                    const ds = CURRENT_YEAR + '-' + String(CURRENT_MONTH + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                const monthDays = new Date(anchor.year, anchor.month, 0).getDate();
+                for (let d = 1; d <= monthDays; d++) {
+                    const ds = anchor.year + '-' + String(anchor.month).padStart(2, '0') + '-' + String(d).padStart(2, '0');
                     const de = appData.records.filter(r => r.date === ds).reduce((s, r) => s + r.exp, 0);
                     cum += de;
                     pts.push({ day: d, cum });
@@ -4593,9 +4697,9 @@
                 ctx.font = '9px "PingFang SC","Microsoft YaHei",sans-serif';
                 ctx.textBaseline = 'middle';
                 ctx.textAlign = 'center';
-                const labels = [1, Math.ceil(DAYS_IN_MONTH / 3), Math.ceil(DAYS_IN_MONTH * 2 / 3), DAYS_IN_MONTH];
+                const labels = [1, Math.ceil(monthDays / 3), Math.ceil(monthDays * 2 / 3), monthDays];
                 labels.forEach(d => {
-                    const x = pad.left + ((d - 1) / (DAYS_IN_MONTH - 1 || 1)) * cw;
+                    const x = pad.left + ((d - 1) / (monthDays - 1 || 1)) * cw;
                     ctx.fillText(d, x, h - 8);
                 });
 
@@ -4618,7 +4722,7 @@
                 ctx.lineWidth = 2.5;
                 ctx.lineJoin = 'round';
                 pts.forEach((p, i) => {
-                    const x = pad.left + ((p.day - 1) / (DAYS_IN_MONTH - 1 || 1)) * cw;
+                    const x = pad.left + ((p.day - 1) / (monthDays - 1 || 1)) * cw;
                     const y = pad.top + ch - (p.cum / maxC) * ch;
                     if (i === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
@@ -4627,7 +4731,7 @@
 
                 const last = pts[pts.length - 1];
                 if (last && last.cum > 0) {
-                    const lx = pad.left + ((last.day - 1) / (DAYS_IN_MONTH - 1 || 1)) * cw;
+                    const lx = pad.left + ((last.day - 1) / (monthDays - 1 || 1)) * cw;
                     const ly = pad.top + ch - (last.cum / maxC) * ch;
                     ctx.beginPath();
                     ctx.arc(lx, ly, 4, 0, Math.PI * 2);
@@ -4650,7 +4754,10 @@
 
                 const colors = getThemeColors();
                 const dims = getDimensions();
-                let data = dims.map(name => ({ name, exp: calcDimensionExp(name), color: getDimColorPie(name) })).filter(d => d.exp > 0);
+                const anchor = getTrendAnchorParts();
+                const anchorMonthPrefix = anchor.year + '-' + String(anchor.month).padStart(2, '0') + '-';
+                const anchorRecords = appData.records.filter(r => String(r.date || '').startsWith(anchorMonthPrefix));
+                let data = dims.map(name => ({ name, exp: anchorRecords.filter(r => r.dimension === name).reduce((s, r) => s + r.exp, 0), color: getDimColorPie(name) })).filter(d => d.exp > 0);
                 const total = data.reduce((s, d) => s + d.exp, 0) || 1;
                 data.sort((a, b) => b.exp - a.exp);
 
@@ -4922,7 +5029,6 @@
 
             function refreshAllUI() {
                 const totalExp = calcTotalExp(); const level = calcLevel(totalExp); const remaining = calcExpRemaining(totalExp); const barPct = calcExpBarPct(totalExp); const nextLvExp = calcExpForNextLevel(totalExp);
-                document.getElementById('calendarMonthTitle').textContent = `${CURRENT_YEAR}年${CURRENT_MONTH + 1}月`;
                 document.getElementById('levelBadge').innerHTML = `<span class="lv-label">LV</span>${level}`;
                 document.getElementById('totalExpDisplay').textContent = totalExp;
                 document.getElementById('expRemainingDisplay').textContent = remaining;
@@ -4934,7 +5040,7 @@
                 renderCheckinCards(); renderGrowthGrid(); refreshRecordTable(window.currentFilterDate || null);
                 renderCalendar(); renderGoals(); renderQuotes();
                 refreshMobileOverview(totalExp, level, remaining);
-                drawRadarChart(); drawBarChart7(); drawLineChartMonth(); drawPieChartDim();
+                drawRadarChart(); refreshTrendCharts();
             }
             function renderCheckinCards() {
                 const todayRecords = appData.records.filter(r => r.date === TODAY_STR);
@@ -4967,7 +5073,7 @@
             // 暴露到window
             window.openCheckinModal = openCheckinModal; window.closeCheckinModal = closeCheckinModal; window.updateExpPreview = updateExpPreview; window.submitCheckin = submitCheckin;
             window.openArchiveModal = openArchiveModal; window.closeArchiveModal = closeArchiveModal; window.previewArchiveDate = previewArchiveDate; window.jumpToArchiveDate = jumpToArchiveDate; window.showAllRecords = showAllRecords;
-            window.exportData = exportData; window.resetAllData = resetAllData; window.deleteRecord = deleteRecord; window.selectCalendarDate = selectCalendarDate;
+            window.exportData = exportData; window.resetAllData = resetAllData; window.deleteRecord = deleteRecord; window.selectCalendarDate = selectCalendarDate; window.shiftCalendarMonth = shiftCalendarMonth;
             window.toggleTheme = toggleTheme; window.openSettingsModal = openSettingsModal; window.closeSettingsModal = closeSettingsModal;
             window.switchMobileTab = switchMobileTab;
             window.openSettingsFromNav = openSettingsFromNav;

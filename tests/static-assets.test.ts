@@ -100,6 +100,7 @@ describe("static web assets", () => {
     expect(html).toContain("avatar.addEventListener('click', () => input.click())");
     expect(html).toContain('id="themeToggleBtn"');
     expect(html).toContain("const headerBtn = document.getElementById('themeToggleBtn')");
+    expect(html).not.toContain("body.mobile-preview #themeToggleBtn {\n                display: none;\n            }");
     expect(html).not.toContain("settingsAvatarInput");
     expect(html).not.toContain("settingsAvatarPreview");
     expect(html).not.toContain("settingsThemeToggleBtn");

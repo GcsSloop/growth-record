@@ -2832,6 +2832,22 @@
             cursor: pointer;
         }
 
+        body.mobile-preview .record-delete-btn {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border-radius: 9px;
+            border: 1px solid rgba(239, 68, 68, 0.28);
+            background: var(--danger-bg);
+            color: var(--accent-red);
+            font-size: 1rem;
+            line-height: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
         body.mobile-preview .settings-add-row {
             display: grid !important;
             grid-template-columns: minmax(0, 1fr) 42px;
@@ -2894,6 +2910,16 @@
 
         body.mobile-preview #profileAvatar:active {
             transform: scale(0.98);
+        }
+
+        body.mobile-preview #avatarImageInput {
+            position: fixed;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+            left: -9999px;
+            top: 0;
         }
 
         @supports not (background: color-mix(in srgb, black, white)) {
@@ -3359,6 +3385,67 @@
 
             body.mobile-preview .record-table-wrap {
                 max-height: 460px;
+                overflow-x: hidden;
+            }
+
+            body.mobile-preview .record-table {
+                width: 100%;
+                min-width: 0 !important;
+                table-layout: fixed;
+            }
+
+            body.mobile-preview .record-table th,
+            body.mobile-preview .record-table td {
+                padding: 7px 6px;
+            }
+
+            body.mobile-preview .record-table th:nth-child(1),
+            body.mobile-preview .record-table td:nth-child(1) {
+                width: 54px;
+            }
+
+            body.mobile-preview .record-table th:nth-child(2),
+            body.mobile-preview .record-table td:nth-child(2) {
+                width: 88px;
+            }
+
+            body.mobile-preview .record-table th:nth-child(3),
+            body.mobile-preview .record-table td:nth-child(3) {
+                width: 64px;
+            }
+
+            body.mobile-preview .record-table th:nth-child(4),
+            body.mobile-preview .record-table td:nth-child(4) {
+                width: 58px;
+            }
+
+            body.mobile-preview .record-table th:nth-child(5),
+            body.mobile-preview .record-table td:nth-child(5) {
+                width: auto;
+                min-width: 0;
+            }
+
+            body.mobile-preview .record-table th:nth-child(6),
+            body.mobile-preview .record-table td:nth-child(6) {
+                width: 52px;
+            }
+
+            body.mobile-preview .record-table th:nth-child(7),
+            body.mobile-preview .record-table td:nth-child(7) {
+                width: 52px;
+            }
+
+            body.mobile-preview .record-table td {
+                height: auto;
+                vertical-align: top;
+            }
+
+            body.mobile-preview .record-desc-cell {
+                white-space: normal;
+                overflow-wrap: anywhere;
+                word-break: break-word;
+                line-height: 1.35;
+                min-width: 0;
             }
 
             body.mobile-preview #radarCanvas {
@@ -3590,8 +3677,21 @@
             margin-top: 0 !important;
         }
 
+        body.mobile-preview:not(.mobile-tab-overview) .header {
+            display: none !important;
+        }
+
         body.mobile-preview .app-container {
             padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+        }
+
+        body.mobile-preview .mobile-bottom-nav {
+            transition: none;
+            will-change: auto;
+        }
+
+        body.mobile-preview.mobile-keyboard-active .mobile-bottom-nav {
+            display: none !important;
         }
 
         body.mobile-preview .settings-list-row,
@@ -3791,13 +3891,13 @@
     <div class="app-container">
         <header class="header">
             <div class="header-left">
-                <div class="profile-avatar" id="profileAvatar">
+                <label class="profile-avatar" id="profileAvatar" for="avatarImageInput">
                     <div class="profile-avatar-inner">
                         <img id="profileAvatarImg" alt="头像">
                         <span class="profile-avatar-placeholder">月</span>
                     </div>
-                </div>
-                <input type="file" id="avatarImageInput" accept="image/*" style="display:none;">
+                </label>
+                <input type="file" id="avatarImageInput" accept="image/*">
                 <h1 class="header-title" id="headerTitleDisplay">✨ 园中月努力可视化系统</h1>
                 <p class="header-subtitle" id="headerSubtitleDisplay"
                     style="font-size:0.8rem; color:var(--text-secondary);">自由才是我永恒的向往</p>
@@ -4020,13 +4120,6 @@
                 <h4>维度自定义</h4>
                 <div id="settingsDimList" style="display:flex;flex-direction:column;gap:8px;"></div>
             </div>
-            <div class="settings-section">
-                <h4>数据管理</h4>
-                <div class="settings-data-actions">
-                    <button class="btn btn-outline btn-sm" onclick="settingsExportData()">导出</button>
-                    <button class="btn btn-sm btn-danger-outline" onclick="settingsResetAllData()">重置</button>
-                </div>
-            </div>
             <div class="form-actions">
                 <button class="btn-cancel" onclick="closeSettingsModal()">取消</button>
                 <button class="btn btn-primary" onclick="saveSettings()">保存</button>
@@ -4093,6 +4186,7 @@
                 return {
                     title: '✨ 园中月努力可视化系统',
                     subtitle: '自由才是我永恒的向往',
+                    theme: 'dark',
                     dimensions: [...DEFAULT_DIMENSIONS],
                     descriptions: { ...DEFAULT_DESCRIPTIONS },
                     dimensionLevelExp: getDefaultDimensionLevelExp(),
@@ -4111,7 +4205,8 @@
             function saveLocalPrefs(settings) {
                 try {
                     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-                        avatarImage: settings.avatarImage || ''
+                        avatarImage: settings.avatarImage || '',
+                        theme: settings.theme === 'light' ? 'light' : 'dark'
                     }));
                 } catch (e) { showToast('\u672c\u5730\u504f\u597d\u4fdd\u5b58\u5931\u8d25', 'warning'); }
             }
@@ -4140,7 +4235,7 @@
                     dimensionLevelExp: payload.dimensionLevelExp && typeof payload.dimensionLevelExp === 'object' ? payload.dimensionLevelExp : defaults.dimensionLevelExp,
                     goals: Array.isArray(payload.goals) ? payload.goals : defaults.goals,
                     quotes: Array.isArray(payload.quotes) ? payload.quotes : defaults.quotes,
-                    theme: payload.theme === 'light' ? 'light' : 'dark',
+                    theme: localPrefs.theme === 'light' ? 'light' : defaults.theme,
                     avatarImage: typeof localPrefs.avatarImage === 'string' ? localPrefs.avatarImage : ''
                 };
             }
@@ -4208,7 +4303,8 @@
             }
 
             let appData = getDefaultData();
-            let appSettings = { ...getDefaultSettings(), ...loadLocalPrefs(), theme: 'dark' };
+            const localPrefs = loadLocalPrefs();
+            let appSettings = { ...getDefaultSettings(), ...localPrefs, theme: localPrefs.theme === 'light' ? 'light' : 'dark' };
             ensureDataShape();
 
             function getDimensions() { return appSettings.dimensions || DEFAULT_DIMENSIONS; }
@@ -4445,8 +4541,6 @@
                 } catch (e) { showToast('\u91cd\u7f6e\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5', 'warning'); }
             }
 
-            function settingsExportData() { closeSettingsModal(); setTimeout(exportData, 150); }
-            function settingsResetAllData() { closeSettingsModal(); setTimeout(resetAllData, 150); }
             function syncCalendarViewToDate(dateStr) {
                 const parts = parseDateParts(dateStr || TODAY_STR);
                 calendarViewYear = parts.year;
@@ -4521,7 +4615,7 @@
                     noMsg.style.display = 'block';
                 } else {
                     noMsg.style.display = 'none';
-                    tbody.innerHTML = records.map(r => '<tr><td><span class="status-done">完成</span></td><td>' + r.date + '</td><td>' + r.dimension + '</td><td>' + r.hours + '小时</td><td>' + escapeHtml(r.desc) + '</td><td><span class="exp-badge">+' + r.exp + '</span></td><td><button class="btn-danger-text" onclick="event.stopPropagation();deleteRecord(\'' + r.id + '\')">删除</button></td></tr>').join('');
+                    tbody.innerHTML = records.map(r => '<tr><td><span class="status-done">完成</span></td><td>' + r.date + '</td><td>' + r.dimension + '</td><td>' + r.hours + '小时</td><td class="record-desc-cell">' + escapeHtml(r.desc) + '</td><td><span class="exp-badge">+' + r.exp + '</span></td><td><button class="record-delete-btn" title="删除" aria-label="删除" onclick="event.stopPropagation();deleteRecord(\'' + r.id + '\')">🗑</button></td></tr>').join('');
                 }
                 startAutoScroll();
             }
@@ -4846,6 +4940,7 @@
             async function toggleTheme() {
                 appSettings.theme = document.body.classList.contains('light-theme') ? 'dark' : 'light';
                 initTheme();
+                saveLocalPrefs(appSettings);
                 setTimeout(() => { drawRadarChart(); drawBarChart7(); drawLineChartMonth(); drawPieChartDim(); }, 350);
                 try { await saveServerSettings(); }
                 catch (e) { }
@@ -4919,22 +5014,38 @@
             }
             function updateSettingsDesc(dimKey, val) { if (!appSettings.descriptions) appSettings.descriptions = {}; appSettings.descriptions[dimKey] = val; }
             function updateSettingsDimLevelExp(dimKey, val) { if (!appSettings.dimensionLevelExp) appSettings.dimensionLevelExp = {}; const parsed = Number(val); appSettings.dimensionLevelExp[dimKey] = Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : EXP_PER_LEVEL; }
+            function setAvatarImageData(dataUrl) {
+                if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+                    showToast('请选择图片文件', 'warning');
+                    return;
+                }
+                appSettings.avatarImage = dataUrl;
+                saveSettingsData(appSettings);
+                applyAvatarImage();
+                showToast('头像已更新', 'success');
+            }
             function setupAvatarInput() {
                 const avatar = document.getElementById('profileAvatar');
                 const input = document.getElementById('avatarImageInput');
                 if (!input || input.dataset.bound === '1') return;
                 input.dataset.bound = '1';
-                if (avatar) avatar.addEventListener('click', () => input.click());
+                if (avatar) avatar.addEventListener('click', () => {
+                    if (window.AvatarBridge && window.AvatarBridge.postMessage) {
+                        window.AvatarBridge.postMessage('pick');
+                        return;
+                    }
+                    if (typeof input.showPicker === 'function') {
+                        try { input.showPicker(); return; } catch (err) { }
+                    }
+                    input.click();
+                });
                 input.addEventListener('change', function (e) {
                     const file = e.target.files && e.target.files[0];
                     if (!file) return;
                     if (!file.type.startsWith('image/')) { showToast('请选择图片文件', 'warning'); return; }
                     const reader = new FileReader();
                     reader.onload = function (ev) {
-                        appSettings.avatarImage = String(ev.target.result || '');
-                        saveSettingsData(appSettings);
-                        applyAvatarImage();
-                        showToast('头像已更新', 'success');
+                        setAvatarImageData(String(ev.target.result || ''));
                     };
                     reader.readAsDataURL(file);
                     input.value = '';
@@ -5009,6 +5120,7 @@
                 const grid = document.querySelector('.bento-grid');
                 if (!grid) return;
                 grid.dataset.mobileTab = tab;
+                document.body.classList.toggle('mobile-tab-overview', tab === 'overview');
                 document.querySelectorAll('.mobile-nav-btn, .mobile-nav-add').forEach(btn => {
                                     btn.classList.toggle('active', btn.dataset.tab === tab);
                                 });
@@ -5025,6 +5137,20 @@
 
             function openSettingsFromNav() {
                 switchMobileTab('settings');
+            }
+
+            function setMobileKeyboardActive(active) {
+                if (!document.body.classList.contains('mobile-preview')) return;
+                document.body.classList.toggle('mobile-keyboard-active', !!active);
+            }
+
+            function isTextInputElement(el) {
+                if (!el || el.nodeType !== 1) return false;
+                const tag = el.tagName ? el.tagName.toLowerCase() : '';
+                if (tag === 'textarea') return true;
+                if (tag !== 'input') return false;
+                const type = (el.getAttribute('type') || 'text').toLowerCase();
+                return !['button', 'checkbox', 'radio', 'range', 'file', 'submit', 'reset', 'hidden', 'color'].includes(type);
             }
 
             function refreshAllUI() {
@@ -5080,13 +5206,12 @@
             window.updateSettingsGoal = updateSettingsGoal; window.deleteSettingsGoal = deleteSettingsGoal; window.settingsAddGoal = settingsAddGoal;
             window.updateSettingsQuoteDate = updateSettingsQuoteDate; window.updateSettingsQuoteText = updateSettingsQuoteText; window.deleteSettingsQuote = deleteSettingsQuote; window.settingsAddQuote = settingsAddQuote;
             window.openAppDatePicker = openAppDatePicker;
+            window.setAvatarImageFromNative = setAvatarImageData;
             window.updateSettingsDim = updateSettingsDim; window.updateSettingsDesc = updateSettingsDesc; window.updateSettingsDimLevelExp = updateSettingsDimLevelExp; window.saveSettings = saveSettings;
             window.updateInlineExpPreview = updateInlineExpPreview;
             window.submitInlineCheckin = submitInlineCheckin;
-            // 设置中的数据管理包装函数
-            window.settingsExportData = settingsExportData; window.settingsResetAllData = settingsResetAllData;
-
             window.currentFilterDate = null;
+            document.body.classList.add('mobile-tab-overview');
             initTheme(); applySettingsToUI();
             mountSettingsPage();
             document.getElementById('archiveDate').addEventListener('click', function (e) {
@@ -5095,6 +5220,24 @@
             });
             refreshAllUI();
             syncDashboard({ silent: true });
+            document.addEventListener('focusin', e => {
+                if (isTextInputElement(e.target)) setMobileKeyboardActive(true);
+            });
+            document.addEventListener('focusout', e => {
+                if (isTextInputElement(e.target)) {
+                    setTimeout(() => {
+                        const active = document.activeElement;
+                        setMobileKeyboardActive(isTextInputElement(active));
+                    }, 0);
+                }
+            });
+            window.addEventListener('resize', () => {
+                if (!document.body.classList.contains('mobile-preview')) return;
+                setTimeout(() => {
+                    const active = document.activeElement;
+                    setMobileKeyboardActive(isTextInputElement(active));
+                }, 100);
+            });
             window.addEventListener('resize', () => { clearTimeout(window._rt); window._rt = setTimeout(() => { drawRadarChart(); drawBarChart7(); drawLineChartMonth(); drawPieChartDim(); }, 250); });
             document.getElementById('checkinModalOverlay').addEventListener('click', function (e) { if (e.target === this) closeCheckinModal(); });
             document.getElementById('archiveModalOverlay').addEventListener('click', function (e) { if (e.target === this) closeArchiveModal(); });

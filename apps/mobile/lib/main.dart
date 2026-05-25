@@ -49,7 +49,9 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
   static const webUrl = String.fromEnvironment('GROWTH_RECORD_WEB_URL', defaultValue: defaultWebUrl);
   static const savedAccountKey = 'growth_record_saved_account';
   static const savedPasswordKey = 'growth_record_saved_password';
-  static const secureStorage = FlutterSecureStorage();
+  static const secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
   final accountController = TextEditingController();
   final emailController = TextEditingController();
   final usernameController = TextEditingController();
@@ -74,11 +76,17 @@ class _NativeAuthGateState extends State<NativeAuthGate> {
   }
 
   Future<void> _loadSavedCredentials() async {
-    final savedAccount = await secureStorage.read(key: savedAccountKey);
-    final savedPassword = await secureStorage.read(key: savedPasswordKey);
-    if (!mounted) return;
-    accountController.text = savedAccount ?? '';
-    passwordController.text = savedPassword ?? '';
+    try {
+      final savedAccount = await secureStorage.read(key: savedAccountKey);
+      final savedPassword = await secureStorage.read(key: savedPasswordKey);
+      if (!mounted) return;
+      accountController.text = savedAccount ?? '';
+      passwordController.text = savedPassword ?? '';
+    } catch (_) {
+      // Some Android devices can reject stale keystore entries after reinstall/restore.
+      await secureStorage.delete(key: savedAccountKey);
+      await secureStorage.delete(key: savedPasswordKey);
+    }
   }
 
   Future<void> _saveCredentials(String account, String password) async {
@@ -319,6 +327,12 @@ class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
           unawaited(_saveBackupFromWeb(message.message));
         },
       )
+      ..addJavaScriptChannel(
+        'AvatarBridge',
+        onMessageReceived: (_) {
+          unawaited(_pickAvatarForWeb());
+        },
+      )
       ..setNavigationDelegate(
         NavigationDelegate(
           onWebResourceError: (error) {
@@ -340,10 +354,10 @@ class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
       final acceptedTypeGroups = _acceptedTypeGroups(params.acceptTypes);
       if (params.mode == FileSelectorMode.openMultiple) {
         final files = await openFiles(acceptedTypeGroups: acceptedTypeGroups);
-        return files.map((file) => file.path).toList();
+        return files.map((file) => Uri.file(file.path).toString()).toList();
       }
       final file = await openFile(acceptedTypeGroups: acceptedTypeGroups);
-      return file == null ? <String>[] : <String>[file.path];
+      return file == null ? <String>[] : <String>[Uri.file(file.path).toString()];
     });
   }
 
@@ -358,6 +372,31 @@ class _GrowthRecordWebViewState extends State<GrowthRecordWebView> {
         .map((type) => type.substring(1))
         .toList();
     return [XTypeGroup(label: 'Selected files', mimeTypes: mimeTypes, extensions: extensions)];
+  }
+
+  Future<void> _pickAvatarForWeb() async {
+    try {
+      final file = await openFile(
+        acceptedTypeGroups: const [XTypeGroup(label: 'Images', mimeTypes: ['image/*'])],
+      );
+      if (file == null) return;
+      final bytes = await File(file.path).readAsBytes();
+      final mimeType = _avatarMimeType(file.path);
+      final dataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+      await controller.runJavaScript(
+        'window.setAvatarImageFromNative(${jsonEncode(dataUrl)})',
+      );
+    } catch (_) {
+      // The web file input fallback remains available when native picking fails.
+    }
+  }
+
+  String _avatarMimeType(String path) {
+    final lower = path.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
   }
 
   Future<void> _saveBackupFromWeb(String message) async {

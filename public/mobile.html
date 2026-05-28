@@ -4222,6 +4222,7 @@
             let calendarViewYear = CURRENT_YEAR;
             let calendarViewMonth = CURRENT_MONTH;
             let selectedCalendarDate = null;
+            let trendAnchorDate = TODAY_STR;
             const DEFAULT_BACKUP_DIR_NAME = 'GrowthRecordBackups';
 
             function getThemeColors() {
@@ -4601,6 +4602,7 @@
             function showAllRecords() {
                 window.currentFilterDate = null;
                 selectedCalendarDate = null;
+                trendAnchorDate = TODAY_STR;
                 closeArchiveModal();
                 switchMobileTab('records');
                 refreshRecordTable(null);
@@ -4642,6 +4644,7 @@
                 const parts = parseDateParts(dateStr || TODAY_STR);
                 calendarViewYear = parts.year;
                 calendarViewMonth = parts.month - 1;
+                trendAnchorDate = dateStr || TODAY_STR;
             }
             function refreshTrendCharts() {
                 drawBarChart7();
@@ -4652,6 +4655,8 @@
                 const next = new Date(calendarViewYear, calendarViewMonth + delta, 1);
                 calendarViewYear = next.getFullYear();
                 calendarViewMonth = next.getMonth();
+                const midDay = Math.min(15, new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate());
+                trendAnchorDate = formatDate(new Date(calendarViewYear, calendarViewMonth, midDay));
                 renderCalendar();
                 refreshTrendCharts();
             }
@@ -4689,6 +4694,7 @@
                 if (window.currentFilterDate === ds) {
                     window.currentFilterDate = null;
                     selectedCalendarDate = null;
+                    trendAnchorDate = TODAY_STR;
                     document.getElementById('recordFilterLabel').textContent = '全部';
                     refreshRecordTable(null);
                 } else {
@@ -4733,7 +4739,7 @@
             function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
             function getTrendAnchorDate() {
-                return selectedCalendarDate || window.currentFilterDate || TODAY_STR;
+                return trendAnchorDate || selectedCalendarDate || window.currentFilterDate || TODAY_STR;
             }
             function getTrendAnchorParts() {
                 return parseDateParts(getTrendAnchorDate());

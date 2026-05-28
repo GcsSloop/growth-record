@@ -5019,9 +5019,12 @@
                 const rowH = 13;
                 const legendTop = Math.max(15, cy - Math.max(leftItems.length, rightItems.length) * rowH / 2 + rowH / 2);
                 const leftX = 10;
-                const rightX = cx + radius - 6;
                 const leftMaxW = Math.max(42, cx - radius - leftX - 8);
-                const rightMaxW = Math.max(58, w - rightX - 6);
+                const rightLabels = rightItems.map(d => d.name + ': ' + d.exp);
+                const rightLabelW = rightLabels.length ? Math.max(...rightLabels.map(text => ctx.measureText(text).width)) : 0;
+                const rightBlockW = 8 + 4 + rightLabelW;
+                const rightMargin = 10;
+                const rightX = Math.max(cx + radius + 10, w - rightMargin - rightBlockW);
 
                 leftItems.forEach((d, i) => {
                     const y = legendTop + i * rowH;
@@ -5038,7 +5041,7 @@
                     ctx.fillRect(rightX, y - 4, 8, 8);
                     ctx.fillStyle = colors.chartText;
                     ctx.textAlign = 'left';
-                    ctx.fillText(fitText(d.name + ': ' + d.exp, rightMaxW), rightX + 12, y);
+                    ctx.fillText(d.name + ': ' + d.exp, rightX + 12, y);
                 });
             }
             function getDimColorPie(name) { const m = { '科研学习': '#4ade80', '编程能力': '#60a5fa', '自媒体': '#f472b6', '剪辑技能': '#a78bfa', '表达能力': '#22d3bb', '运动健身': '#fb923c', '化妆技术': '#f87171', '电竞实操': '#818cf8' }; return m[name] || '#aaa'; }

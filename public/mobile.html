@@ -4652,11 +4652,19 @@
                 drawPieChartDim();
             }
             function shiftCalendarMonth(delta) {
+                const currentAnchor = parseDateParts(selectedCalendarDate || window.currentFilterDate || trendAnchorDate || TODAY_STR);
                 const next = new Date(calendarViewYear, calendarViewMonth + delta, 1);
                 calendarViewYear = next.getFullYear();
                 calendarViewMonth = next.getMonth();
-                const midDay = Math.min(15, new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate());
-                trendAnchorDate = formatDate(new Date(calendarViewYear, calendarViewMonth, midDay));
+                const daysInTargetMonth = new Date(calendarViewYear, calendarViewMonth + 1, 0).getDate();
+                const targetDay = Math.min(currentAnchor.day, daysInTargetMonth);
+                const targetDate = formatDate(new Date(calendarViewYear, calendarViewMonth, targetDay));
+                trendAnchorDate = targetDate;
+                selectedCalendarDate = targetDate;
+                window.currentFilterDate = targetDate;
+                document.getElementById('recordFilterLabel').textContent = '筛选：' + targetDate;
+                document.getElementById('calendarDateInfo').textContent = '已筛选：' + targetDate;
+                refreshRecordTable(targetDate);
                 renderCalendar();
                 refreshTrendCharts();
             }

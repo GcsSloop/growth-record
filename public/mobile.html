@@ -4973,11 +4973,10 @@
                     data = [...top, { name: '其他', exp: otherExp, color: '#7f8aa3' }];
                 }
 
-                const legendW = Math.min(96, Math.max(72, w * 0.28));
-                const cx = Math.max(58, (w - legendW) / 2);
+                const cx = w / 2;
                 const cy = h * 0.48;
-                const leftLegendW = Math.max(50, cx - 18);
-                const radiusByWidth = Math.max(26, Math.min(cx - leftLegendW - 8, w - legendW - cx - 10));
+                const sideGap = 58;
+                const radiusByWidth = Math.max(26, (w - sideGap * 2) / 2);
                 const radius = Math.max(30, Math.min(radiusByWidth, h * 0.40));
                 let sa = -Math.PI / 2;
 
@@ -5020,7 +5019,7 @@
                 const rowH = 13;
                 const legendTop = Math.max(15, cy - Math.max(leftItems.length, rightItems.length) * rowH / 2 + rowH / 2);
                 const leftX = 10;
-                const rightX = Math.min(w - legendW, cx + radius + 14);
+                const rightX = cx + radius - 6;
                 const leftMaxW = Math.max(42, cx - radius - leftX - 8);
                 const rightMaxW = Math.max(58, w - rightX - 6);
 

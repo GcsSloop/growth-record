@@ -1778,7 +1778,7 @@
 
         body.mobile-preview .bento-grid {
             display: block;
-            padding-top: 2px;
+            padding-top: 0;
             padding-bottom: 52px;
         }
 
@@ -1800,7 +1800,7 @@
         }
 
         body.mobile-preview .card {
-            margin-bottom: 12px;
+            margin-bottom: var(--adaptive-card-gap);
             border-radius: 22px;
             border: 1px solid #dde3ec;
             background: rgba(255, 255, 255, 0.86);
@@ -2652,7 +2652,7 @@
             display: grid;
             grid-template-columns: minmax(0, 1fr) auto;
             align-items: start;
-            margin: 0 0 12px;
+            margin: 0;
             padding: 16px;
             border: 1px solid var(--border-subtle);
             border-radius: 22px;
@@ -2745,7 +2745,7 @@
         body.mobile-preview .mobile-bottom-nav {
             left: 18px;
             right: 18px;
-            bottom: 10px;
+            bottom: 0;
             width: min(394px, calc(100% - 36px));
             border: 1px solid var(--border-subtle);
             border-radius: 22px 22px 0 0;
@@ -2753,6 +2753,8 @@
             box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.28);
             overflow: visible;
             justify-items: center;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+            will-change: opacity, transform;
         }
 
         body.mobile-preview .mobile-nav-btn {
@@ -3670,11 +3672,50 @@
 
 
         /* 2026-05-21 Android UI refinements */
+        body.mobile-preview {
+            padding-top: 0 !important;
+        }
+
         body.mobile-preview .header {
             position: relative !important;
             top: auto !important;
             z-index: 1 !important;
             margin-top: 0 !important;
+            margin-bottom: var(--adaptive-card-gap) !important;
+            padding: 10px 14px !important;
+            align-items: center !important;
+        }
+
+        body.mobile-preview .header-left {
+            grid-template-columns: 62px minmax(0, 1fr) !important;
+            gap: 8px !important;
+            min-height: 0 !important;
+        }
+
+        body.mobile-preview .profile-avatar {
+            width: 52px !important;
+            height: 52px !important;
+            padding: 4px !important;
+        }
+
+        body.mobile-preview .profile-avatar-inner {
+            border-width: 3px !important;
+        }
+
+        body.mobile-preview .header-title {
+            font-size: 1.06rem !important;
+            line-height: 1.1 !important;
+        }
+
+        body.mobile-preview .header-subtitle {
+            margin-top: 3px !important;
+            font-size: 0.72rem !important;
+        }
+
+        body.mobile-preview .mobile-hero-meta {
+            margin-top: 2px !important;
+            font-size: 0.68rem !important;
+            line-height: 1.2 !important;
         }
 
         body.mobile-preview:not(.mobile-tab-overview) .header {
@@ -3682,7 +3723,24 @@
         }
 
         body.mobile-preview .app-container {
+            padding-top: 0 !important;
             padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+        }
+
+        body.mobile-preview .bento-grid[data-mobile-tab="overview"] {
+            padding-top: 0 !important;
+        }
+
+        body.mobile-preview .bento-grid[data-mobile-tab="overview"] .card {
+            margin-bottom: var(--adaptive-card-gap) !important;
+        }
+
+        body.mobile-preview .bento-grid[data-mobile-tab="overview"] .card:last-child {
+            margin-bottom: 0 !important;
+        }
+
+        body.mobile-preview .app-container {
+            gap: 0 !important;
         }
 
         body.mobile-preview .mobile-bottom-nav {
@@ -3691,7 +3749,9 @@
         }
 
         body.mobile-preview.mobile-keyboard-active .mobile-bottom-nav {
-            display: none !important;
+            opacity: 0;
+            transform: translate3d(0, 14px, 0);
+            pointer-events: none;
         }
 
         body.mobile-preview .settings-list-row,
@@ -4212,6 +4272,33 @@
             }
             function saveData(data) { refreshAllUI(); }
             function saveSettingsData(settings) { saveLocalPrefs(settings); }
+            function cloneSettingsSnapshot(value) {
+                return JSON.parse(JSON.stringify(value));
+            }
+            function captureSettingsSnapshot() {
+                if (settingsEditSnapshot) return;
+                settingsEditSnapshot = cloneSettingsSnapshot({
+                    settings: appSettings,
+                    goals: appData.goals || [],
+                    quotes: appData.quotes || [],
+                    dimensionBaseExp: appData.dimensionBaseExp || {}
+                });
+            }
+            function restoreSettingsSnapshot() {
+                if (!settingsEditSnapshot) return;
+                const snapshot = cloneSettingsSnapshot(settingsEditSnapshot);
+                appSettings = { ...snapshot.settings };
+                appData.goals = [...(snapshot.goals || [])];
+                appData.quotes = [...(snapshot.quotes || [])];
+                appData.dimensionBaseExp = { ...(snapshot.dimensionBaseExp || {}) };
+                ensureDataShape();
+                applySettingsToUI();
+                renderSettingsPage();
+                refreshAllUI();
+            }
+            function clearSettingsSnapshot() {
+                settingsEditSnapshot = null;
+            }
             function normalizeApiRecord(record) {
                 const hours = Number(record.hours) || 0;
                 return {
@@ -4305,6 +4392,7 @@
             let appData = getDefaultData();
             const localPrefs = loadLocalPrefs();
             let appSettings = { ...getDefaultSettings(), ...localPrefs, theme: localPrefs.theme === 'light' ? 'light' : 'dark' };
+            let settingsEditSnapshot = null;
             ensureDataShape();
 
             function getDimensions() { return appSettings.dimensions || DEFAULT_DIMENSIONS; }
@@ -4957,6 +5045,7 @@
             }
 
             function openSettingsModal() {
+                captureSettingsSnapshot();
                 document.getElementById('settingsTitle').value = appSettings.title;
                 document.getElementById('settingsSubtitle').value = appSettings.subtitle;
                 renderSettingsGoalList();
@@ -4986,7 +5075,19 @@
                 setupAvatarInput();
                 renderSettingsPage();
             }
-            function closeSettingsModal() { document.getElementById('settingsModalOverlay').style.display = 'none'; const tab = document.querySelector('.bento-grid')?.dataset.mobileTab || 'overview'; document.querySelectorAll('.mobile-nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab)); }
+            function closeSettingsModal(options = {}) {
+                const committed = !!options.committed;
+                document.getElementById('settingsModalOverlay').style.display = 'none';
+                if (!committed) restoreSettingsSnapshot();
+                clearSettingsSnapshot();
+                if (document.body.classList.contains('mobile-preview')) {
+                    switchMobileTab('overview');
+                    if (!committed) showToast('\u5df2\u53d6\u6d88\u4fee\u6539', 'info');
+                    return;
+                }
+                const tab = document.querySelector('.bento-grid')?.dataset.mobileTab || 'overview';
+                document.querySelectorAll('.mobile-nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+            }
             function renderSettingsGoalList() { const container = document.getElementById('settingsGoalList'); const goals = appSettings.goals || []; container.innerHTML = goals.map((g, i) => `<div class="settings-list-row"><input class="settings-input" value="${escapeHtml(g)}" onchange="updateSettingsGoal(${i},this.value)"><button class="settings-delete-btn" title="删除" aria-label="删除" onclick="deleteSettingsGoal(${i})">🗑</button></div>`).join(''); }
             function updateSettingsGoal(i, val) { appSettings.goals[i] = val; }
             function deleteSettingsGoal(i) { appSettings.goals.splice(i, 1); renderSettingsGoalList(); }
@@ -5059,7 +5160,7 @@
                 try {
                     await saveServerSettings();
                     await syncDashboard({ silent: true });
-                    closeSettingsModal();
+                    closeSettingsModal({ committed: true });
                     showToast('\u8bbe\u7f6e\u5df2\u4fdd\u5b58', 'success');
                 } catch (e) { showToast('\u8bbe\u7f6e\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5', 'warning'); }
             }
@@ -5124,7 +5225,10 @@
                 document.querySelectorAll('.mobile-nav-btn, .mobile-nav-add').forEach(btn => {
                                     btn.classList.toggle('active', btn.dataset.tab === tab);
                                 });
-                if (tab === 'settings') renderSettingsPage();
+                if (tab === 'settings') {
+                    captureSettingsSnapshot();
+                    renderSettingsPage();
+                }
                 stopAutoScroll();
                 if (tab === 'records') {
                     refreshRecordTable(window.currentFilterDate || null);
@@ -5139,9 +5243,18 @@
                 switchMobileTab('settings');
             }
 
+            let mobileKeyboardActive = false;
+            let mobileKeyboardFrame = 0;
             function setMobileKeyboardActive(active) {
                 if (!document.body.classList.contains('mobile-preview')) return;
-                document.body.classList.toggle('mobile-keyboard-active', !!active);
+                const next = !!active;
+                if (mobileKeyboardActive === next) return;
+                mobileKeyboardActive = next;
+                if (mobileKeyboardFrame) cancelAnimationFrame(mobileKeyboardFrame);
+                mobileKeyboardFrame = requestAnimationFrame(() => {
+                    document.body.classList.toggle('mobile-keyboard-active', mobileKeyboardActive);
+                    mobileKeyboardFrame = 0;
+                });
             }
 
             function isTextInputElement(el) {
@@ -5232,13 +5345,10 @@
                 }
             });
             window.addEventListener('resize', () => {
-                if (!document.body.classList.contains('mobile-preview')) return;
-                setTimeout(() => {
-                    const active = document.activeElement;
-                    setMobileKeyboardActive(isTextInputElement(active));
-                }, 100);
+                if (mobileKeyboardActive || isTextInputElement(document.activeElement)) return;
+                clearTimeout(window._rt);
+                window._rt = setTimeout(() => { drawRadarChart(); drawBarChart7(); drawLineChartMonth(); drawPieChartDim(); }, 250);
             });
-            window.addEventListener('resize', () => { clearTimeout(window._rt); window._rt = setTimeout(() => { drawRadarChart(); drawBarChart7(); drawLineChartMonth(); drawPieChartDim(); }, 250); });
             document.getElementById('checkinModalOverlay').addEventListener('click', function (e) { if (e.target === this) closeCheckinModal(); });
             document.getElementById('archiveModalOverlay').addEventListener('click', function (e) { if (e.target === this) closeArchiveModal(); });
             document.getElementById('settingsModalOverlay').addEventListener('click', function (e) { if (e.target === this) closeSettingsModal(); });

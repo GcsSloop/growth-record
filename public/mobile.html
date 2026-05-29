@@ -2753,8 +2753,6 @@
             box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.28);
             overflow: visible;
             justify-items: center;
-            transition: opacity 0.18s ease, transform 0.18s ease;
-            will-change: opacity, transform;
         }
 
         body.mobile-preview .mobile-nav-btn {
@@ -3745,8 +3743,6 @@
 
         body.mobile-preview .mobile-bottom-nav {
             grid-template-columns: 1fr 1fr clamp(58px, 16vw, 68px) 1fr 1fr;
-            transition: opacity 0.16s ease, transform 0.16s ease;
-            will-change: opacity, transform;
         }
 
         body.mobile-preview .mobile-nav-add {
@@ -3758,9 +3754,7 @@
         }
 
         body.mobile-preview.mobile-keyboard-active .mobile-bottom-nav {
-            opacity: 0;
-            transform: translate3d(0, 14px, 0);
-            pointer-events: none;
+            display: none;
         }
 
         body.mobile-preview .settings-list-row,
@@ -5270,26 +5264,23 @@
             }
 
             let mobileKeyboardActive = false;
-            let mobileKeyboardFrame = 0;
             function setMobileKeyboardActive(active) {
                 if (!document.body.classList.contains('mobile-preview')) return;
                 const next = !!active;
                 if (mobileKeyboardActive === next) return;
                 mobileKeyboardActive = next;
-                if (mobileKeyboardFrame) cancelAnimationFrame(mobileKeyboardFrame);
-                mobileKeyboardFrame = requestAnimationFrame(() => {
-                    document.body.classList.toggle('mobile-keyboard-active', mobileKeyboardActive);
-                    mobileKeyboardFrame = 0;
-                });
+                document.body.classList.toggle('mobile-keyboard-active', mobileKeyboardActive);
             }
 
             function isTextInputElement(el) {
                 if (!el || el.nodeType !== 1) return false;
                 const tag = el.tagName ? el.tagName.toLowerCase() : '';
                 if (tag === 'textarea') return true;
+                if (tag === 'select') return true;
+                if (el.isContentEditable) return true;
                 if (tag !== 'input') return false;
                 const type = (el.getAttribute('type') || 'text').toLowerCase();
-                return !['button', 'checkbox', 'radio', 'range', 'file', 'submit', 'reset', 'hidden', 'color'].includes(type);
+                return !['button', 'checkbox', 'radio', 'range', 'file', 'submit', 'reset', 'hidden', 'color', 'image'].includes(type);
             }
 
             function refreshAllUI() {

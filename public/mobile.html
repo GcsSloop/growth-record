@@ -3753,6 +3753,68 @@
             transform: translateY(-6px);
         }
 
+        body.mobile-preview .mobile-nav-btn,
+        body.mobile-preview .mobile-nav-add {
+            appearance: none;
+            -webkit-appearance: none;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        body.mobile-preview .mobile-nav-btn {
+            border-radius: 16px;
+        }
+
+        body.mobile-preview .mobile-nav-btn:focus,
+        body.mobile-preview .mobile-nav-btn:focus-visible,
+        body.mobile-preview .mobile-nav-btn:active {
+            outline: none;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        body.mobile-preview .mobile-nav-btn .nav-icon {
+            display: block;
+            background: transparent;
+            border: 0;
+            pointer-events: none;
+            transition: transform 0.08s ease, color 0.08s ease;
+        }
+
+        body.mobile-preview .mobile-nav-btn:active .nav-icon {
+            transform: scale(0.92);
+        }
+
+        body.mobile-preview .mobile-nav-add:focus,
+        body.mobile-preview .mobile-nav-add:focus-visible {
+            outline: none;
+        }
+
+        body.mobile-preview .mobile-nav-add:active {
+            transform: translateY(-6px) scale(0.96);
+            box-shadow: 0 8px 20px rgba(240, 192, 96, 0.24);
+        }
+
+        body.mobile-preview #themeToggleBtn,
+        body.mobile-preview #themeToggleBtn:hover,
+        body.mobile-preview #themeToggleBtn:focus,
+        body.mobile-preview #themeToggleBtn:focus-visible,
+        body.mobile-preview #themeToggleBtn:active {
+            transform: none;
+            outline: none;
+        }
+
+        body.mobile-preview #themeToggleBtn {
+            display: inline-grid;
+            place-items: center;
+            line-height: 1;
+            text-align: center;
+            appearance: none;
+            -webkit-appearance: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         body.mobile-preview.mobile-keyboard-active .mobile-bottom-nav {
             display: none;
         }
@@ -5173,6 +5235,7 @@
                 });
             }
             async function saveSettings() {
+                restoreMobileNavAfterInput();
                 appSettings.title = document.getElementById('settingsTitle').value.trim() || '\u2728 \u56ed\u4e2d\u6708\u52aa\u529b\u53ef\u89c6\u5316\u7cfb\u7edf';
                 appSettings.subtitle = document.getElementById('settingsSubtitle').value.trim() || '\u81ea\u7531\u624d\u662f\u6211\u6c38\u6052\u7684\u5411\u5f80';
                 appData.goals = [...appSettings.goals];
@@ -5182,7 +5245,7 @@
                     await syncDashboard({ silent: true });
                     closeSettingsModal({ committed: true });
                     showToast('\u8bbe\u7f6e\u5df2\u4fdd\u5b58', 'success');
-                } catch (e) { showToast('\u8bbe\u7f6e\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5', 'warning'); }
+                } catch (e) { restoreMobileNavAfterInput(); showToast('\u8bbe\u7f6e\u4fdd\u5b58\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5', 'warning'); }
             }
 
             function buildBackupPayload() {
@@ -5281,6 +5344,12 @@
                 if (tag !== 'input') return false;
                 const type = (el.getAttribute('type') || 'text').toLowerCase();
                 return !['button', 'checkbox', 'radio', 'range', 'file', 'submit', 'reset', 'hidden', 'color', 'image'].includes(type);
+            }
+
+            function restoreMobileNavAfterInput() {
+                const active = document.activeElement;
+                if (isTextInputElement(active) && typeof active.blur === 'function') active.blur();
+                setMobileKeyboardActive(false);
             }
 
             function refreshAllUI() {
